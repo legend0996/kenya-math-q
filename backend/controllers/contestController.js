@@ -104,7 +104,6 @@ export const getContestHistory = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-import pool from "../config/db.js";
 
 // 📝 REGISTER STUDENT TO CONTEST
 export const registerStudentToContest = async (req, res) => {

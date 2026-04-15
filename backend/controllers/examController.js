@@ -3,17 +3,6 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 
-// 🚫 CHECK IF ALREADY DONE
-const existing = await pool.query(
-  "SELECT * FROM results WHERE student_id=$1 AND contest_id=$2",
-  [student_id, contest_id],
-);
-
-if (existing.rows.length > 0) {
-  return res.status(403).json({
-    error: "You already completed this exam",
-  });
-}
 // 🧠 GET QUESTIONS (GRADE + PAYMENT)
 export const getQuestions = async (req, res) => {
   try {
