@@ -6,6 +6,7 @@ import authRoutes from "./routes/authRoutes.js";
 import examRoutes from "./routes/examRoutes.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
 import schoolRoutes from "./routes/schoolRoutes.js";
+import ownerRoutes from "./routes/owner.routes.js";
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/exam", examRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/school", schoolRoutes);
+app.use("/api/owner", ownerRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend running 🚀");

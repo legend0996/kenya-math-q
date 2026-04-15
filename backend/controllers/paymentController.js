@@ -80,3 +80,57 @@ export const getAllPayments = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+export const submitPaymentProof = async (req, res) => {
+  try {
+    const { student_id, contest_id, mpesa_code, proof_text } = req.body;
+
+    if (!student_id || !contest_id || !mpesa_code) {
+      return res.status(400).json({
+        error: "Missing payment details",
+      });
+    }
+
+    await pool.query(
+      `INSERT INTO payments (student_id, contest_id, mpesa_code, proof_text, status)
+       VALUES ($1,$2,$3,$4,'pending')`,
+      [student_id, contest_id, mpesa_code, proof_text],
+    );
+
+    res.json({
+      success: true,
+      message: "Payment proof submitted. Await approval.",
+    });
+  } catch (error) {
+    console.error("PAYMENT PROOF ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+export const getQuestions = async (req, res) => {
+  try {
+    const { contest_id, student_id } = req.params;
+
+    // 🔒 CHECK PAYMENT
+    const payment = await pool.query(
+      "SELECT status FROM payments WHERE student_id=$1 AND contest_id=$2",
+      [student_id, contest_id],
+    );
+
+    if (payment.rows.length === 0 || payment.rows[0].status !== "paid") {
+      return res.status(403).json({
+        error: "You must pay before accessing exam",
+      });
+    }
+
+    const result = await pool.query(
+      "SELECT * FROM questions WHERE contest_id=$1",
+      [contest_id],
+    );
+
+    res.json({
+      success: true,
+      questions: result.rows,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

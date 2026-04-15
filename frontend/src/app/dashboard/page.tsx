@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type User = {
+  id?: number;
   name?: string;
 };
 
@@ -20,7 +21,9 @@ export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [currentContest, setCurrentContest] = useState<Contest | null>(null);
   const [pastContests, setPastContests] = useState<Contest[]>([]);
+  const [result, setResult] = useState<any>(null);
 
+  // 🔐 INIT
   useEffect(() => {
     const token = localStorage.getItem("token");
 
@@ -29,28 +32,67 @@ export default function Dashboard() {
       return;
     }
 
+    let payload: any;
+
     try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      setUser({ name: payload.name || "Student" });
+      payload = JSON.parse(atob(token.split(".")[1]));
+      setUser({
+        id: payload.id,
+        name: payload.name || "Student",
+      });
     } catch {
       router.push("/login");
+      return;
     }
 
-    // 🔥 FETCH CURRENT CONTEST
+    // 🔥 CURRENT CONTEST
     fetch("http://localhost:5000/api/contest/current")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) setCurrentContest(data);
       });
 
-    // 🔥 FETCH PAST CONTESTS (we will create API next if missing)
+    // 🔥 PAST CONTESTS
     fetch("http://localhost:5000/api/contest/history")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) setPastContests(data.contests);
       })
       .catch(() => setPastContests([]));
-  }, []);
+
+    // 🔥 CHECK RESULT (IF DONE)
+    fetch(
+      `http://localhost:5000/api/exam/result?student_id=${payload.id}&contest_id=1`,
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setResult(data.result);
+        }
+      });
+  }, [router]);
+
+  // 🔐 BLOCK REFRESH (ONLY IF EXAM NOT DONE)
+  useEffect(() => {
+    if (result) return;
+
+    const handleBeforeUnload = (e: any) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [result]);
+
+  const handleDownloadCertificate = () => {
+    if (!user?.id) return;
+
+    window.open(
+      `http://localhost:5000/api/exam/certificate?student_id=${user.id}&contest_id=1`,
+    );
+  };
 
   return (
     <main className="pt-24 p-6 max-w-6xl mx-auto">
@@ -80,10 +122,35 @@ export default function Dashboard() {
             <h3 className="font-bold text-lg">{currentContest.name}</h3>
             <p>Status: {currentContest.status}</p>
 
+            {/* 🎯 EXAM CONTROL */}
             {currentContest.status === "live" && (
-              <button className="mt-3 bg-green-600 text-white px-4 py-2 rounded">
-                Join Contest
-              </button>
+              <>
+                {result ? (
+                  <div className="mt-3 bg-gray-100 p-3 rounded text-center">
+                    <p className="font-bold text-green-600">
+                      ✅ Exam Completed
+                    </p>
+
+                    <p className="text-sm text-gray-600 mt-2">
+                      Wait for results or next contest
+                    </p>
+
+                    <button
+                      onClick={handleDownloadCertificate}
+                      className="mt-3 bg-blue-600 text-white px-4 py-2 rounded"
+                    >
+                      Download Certificate
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => router.push("/exam")}
+                    className="mt-3 bg-green-600 text-white px-4 py-2 rounded"
+                  >
+                    Start Exam
+                  </button>
+                )}
+              </>
             )}
           </div>
         ) : (
@@ -109,7 +176,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 🔥 PAST CONTESTS */}
+      {/* PAST CONTESTS */}
       <section>
         <h2 className="text-xl font-bold mb-4">Past Contests</h2>
 
@@ -120,9 +187,11 @@ export default function Dashboard() {
             {pastContests.map((contest) => (
               <div key={contest.id} className="bg-gray-100 p-4 rounded shadow">
                 <h3 className="font-bold">{contest.name}</h3>
+
                 <p className="text-sm text-gray-600">
                   Date: {new Date(contest.start_time).toDateString()}
                 </p>
+
                 <p>Status: {contest.status}</p>
               </div>
             ))}
@@ -132,22 +201,3 @@ export default function Dashboard() {
     </main>
   );
 }
-<button
-  onClick={() => {
-    const token = localStorage.getItem("token");
-
-    let studentId = "";
-
-    if (token) {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      studentId = payload.id;
-    }
-
-    window.open(
-      `http://localhost:5000/api/exam/certificate?student_id=${studentId}&contest_id=1`,
-    );
-  }}
-  className="bg-blue-600 text-white px-4 py-2 rounded mt-4"
->
-  Download Certificate
-</button>;
