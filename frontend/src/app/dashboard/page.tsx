@@ -38,9 +38,9 @@ export default function Dashboard() {
     const headers = { Authorization: `Bearer ${token}` };
 
     Promise.all([
-      fetch("http://localhost:5000/api/contest/current",              { headers }).then((r) => r.json()),
-      fetch("http://localhost:5000/api/contest/history",              { headers }).then((r) => r.json()),
-      fetch(`http://localhost:5000/api/exam/result?student_id=${payload.id}&contest_id=1`, { headers }).then((r) => r.json()),
+      fetch(apiUrl("/api/contest/current"),              { headers }).then((r) => r.json()),
+      fetch(apiUrl("/api/contest/history"),              { headers }).then((r) => r.json()),
+      fetch(apiUrl(`/api/exam/result?student_id=${payload.id}&contest_id=1`), { headers }).then((r) => r.json()),
     ]).then(([contestData, historyData, resultData]) => {
       if (contestData.success) setCurrentContest(contestData);
       if (historyData.success) setPastContests(historyData.contests || []);
@@ -57,7 +57,7 @@ export default function Dashboard() {
 
   const handleDownloadCertificate = () => {
     if (!user?.id) return;
-    window.open(`http://localhost:5000/api/exam/certificate?student_id=${user.id}&contest_id=1`);
+    window.open(apiUrl(`/api/exam/certificate?student_id=${user.id}&contest_id=1`));
   };
 
   const handleLogout = () => {

@@ -32,7 +32,7 @@ export default function SchoolDashboard() {
   const fetchStudents = async (schoolName: string) => {
     if (!schoolName) return;
     try {
-      const res  = await fetch(`http://localhost:5000/api/school/students?school=${encodeURIComponent(schoolName)}`);
+      const res  = await fetch(apiUrl(`/api/school/students?school=${encodeURIComponent(schoolName)}`));
       const data = await res.json();
       if (data.success) setStudents(data.students);
     } catch (e) { console.error(e); }
@@ -48,7 +48,7 @@ export default function SchoolDashboard() {
     if (!form.name.trim() || !form.grade) return;
     setAdding(true);
     try {
-      const res = await fetch("http://localhost:5000/api/school/add-student", {
+      const res = await fetch(apiUrl("/api/school/add-student"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ full_name: form.name, grade: form.grade, school }),
@@ -65,7 +65,7 @@ export default function SchoolDashboard() {
 
   const handleRegister = async (id: number) => {
     try {
-      await fetch("http://localhost:5000/api/contest/register-student", {
+      await fetch(apiUrl("/api/contest/register-student"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ student_id: id }),
@@ -77,7 +77,7 @@ export default function SchoolDashboard() {
 
   const handlePay = async (id: number) => {
     try {
-      await fetch("http://localhost:5000/api/contest/pay", {
+      await fetch(apiUrl("/api/contest/pay"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ student_id: id }),

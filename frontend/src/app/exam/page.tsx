@@ -45,7 +45,7 @@ export default function Exam() {
   useEffect(() => {
     if (!student_id) { window.location.href = "/login"; return; }
 
-    fetch(`http://localhost:5000/api/exam/${contest_id}/${student_id}`)
+    fetch(apiUrl(`/api/exam/${contest_id}/${student_id}`))
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) { alert(data.error || "Access denied"); window.location.href = "/dashboard"; return; }
@@ -83,7 +83,7 @@ export default function Exam() {
     }));
 
     try {
-      await fetch("http://localhost:5000/api/exam/submit", {
+      await fetch(apiUrl("/api/exam/submit"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ student_id, contest_id, answers: formatted }),

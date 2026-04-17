@@ -23,6 +23,12 @@ export default function AvailableContests() {
   const [feedback, setFeedback] = useState<{ type: "success"|"error"; msg: string } | null>(null);
   const { joinedContests, joinContest: markJoined } = useContestStore();
 
+  // Define apiUrl helper
+  const apiUrl: (path: string) => string = (path: string) => {
+    const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    return base + path;
+  };
+
   const getToken = () => localStorage.getItem("token") || "";
   const authHeader = () => ({
     "Content-Type": "application/json",
@@ -30,7 +36,7 @@ export default function AvailableContests() {
   });
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/contest/all", { headers: authHeader() })
+    fetch(apiUrl("/api/contest/all"), { headers: authHeader() })
       .then(r => r.json())
       .then(d => {
         if (d.success) setContests(d.contests || []);
@@ -42,7 +48,7 @@ export default function AvailableContests() {
   const joinContest = async (contestId: number) => {
     setJoining(contestId);
     try {
-      const r = await fetch(`http://localhost:5000/api/contest/${contestId}/join`, {
+      const r = await fetch(apiUrl(`/api/contest/${contestId}/join`), {
         method: "POST", headers: authHeader(),
       });
       const d = await r.json();

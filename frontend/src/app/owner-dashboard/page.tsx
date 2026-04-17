@@ -70,10 +70,10 @@ export default function OwnerDashboard() {
     if (!token) { window.location.href = "/owner-login-7843-secure"; return; }
 
     Promise.all([
-      fetch("http://localhost:5000/api/owner/stats",             { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch("http://localhost:5000/api/owner/schools/pending",   { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch("http://localhost:5000/api/owner/contest/all",       { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch("http://localhost:5000/api/owner/registrations",     { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
+      fetch(apiUrl("/api/owner/stats"),             { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
+      fetch(apiUrl("/api/owner/schools/pending"),   { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
+      fetch(apiUrl("/api/owner/contest/all"),       { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
+      fetch(apiUrl("/api/owner/registrations"),     { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
     ]).then(([s, sc, co, st]) => {
       if (s.success)  setStats(s.stats);
       if (sc.success) setSchools(sc.schools || []);
@@ -83,11 +83,11 @@ export default function OwnerDashboard() {
   }, []);
 
   const updateSchoolStatus = async (id: number, status: string) => {
-    await fetch("http://localhost:5000/api/owner/schools/update", {
+    await fetch(apiUrl("/api/owner/schools/update"), {
       method: "POST", headers: authHeader(),
       body: JSON.stringify({ school_id: id, status }),
     });
-    const r = await fetch("http://localhost:5000/api/owner/schools/pending", { headers: { Authorization: `Bearer ${getToken()}` } });
+    const r = await fetch(apiUrl("/api/owner/schools/pending"), { headers: { Authorization: `Bearer ${getToken()}` } });
     const d = await r.json();
     if (d.success) setSchools(d.schools || []);
     showFeedback("success", `School ${status === "approved" ? "approved" : "rejected"}`);
@@ -96,23 +96,23 @@ export default function OwnerDashboard() {
   const handleCreateContest = async () => {
     if (!contestName.trim() || !contestDate || !contestTime) return;
     const dateTime = `${contestDate}T${contestTime}`;
-    await fetch("http://localhost:5000/api/owner/contest/create", {
+    await fetch(apiUrl("/api/owner/contest/create"), {
       method: "POST", headers: authHeader(),
       body: JSON.stringify({ name: contestName, contest_number: 1, year: new Date().getFullYear(), scheduled_at: dateTime }),
     });
     setContestName(""); setContestDate(""); setContestTime("");
-    const r = await fetch("http://localhost:5000/api/owner/contest/all", { headers: { Authorization: `Bearer ${getToken()}` } });
+    const r = await fetch(apiUrl("/api/owner/contest/all"), { headers: { Authorization: `Bearer ${getToken()}` } });
     const d = await r.json();
     if (d.success) setContests(d.contests || []);
     showFeedback("success", "Contest created successfully");
   };
 
   const activateContest = async (id: number) => {
-    await fetch("http://localhost:5000/api/owner/contest/activate", {
+    await fetch(apiUrl("/api/owner/contest/activate"), {
       method: "POST", headers: authHeader(),
       body: JSON.stringify({ contest_id: id }),
     });
-    const r = await fetch("http://localhost:5000/api/owner/contest/all", { headers: { Authorization: `Bearer ${getToken()}` } });
+    const r = await fetch(apiUrl("/api/owner/contest/all"), { headers: { Authorization: `Bearer ${getToken()}` } });
     const d = await r.json();
     if (d.success) setContests(d.contests || []);
     showFeedback("success", "Contest activated");
@@ -122,7 +122,7 @@ export default function OwnerDashboard() {
     if (!question.trim() || !correct_answer.trim()) return;
     setAddingQ(true);
     try {
-      await fetch("http://localhost:5000/api/owner/question/create", {
+      await fetch(apiUrl("/api/owner/question/create"), {
         method: "POST", headers: authHeader(),
         body: JSON.stringify({ contest_id: 1, grade, type: qType, question, option_a, option_b, option_c, option_d, correct_answer, marks }),
       });
@@ -133,11 +133,11 @@ export default function OwnerDashboard() {
   };
 
   const markPaid = async (student_id: number) => {
-    await fetch("http://localhost:5000/api/owner/payment/mark", {
+    await fetch(apiUrl("/api/owner/payment/mark"), {
       method: "POST", headers: authHeader(),
       body: JSON.stringify({ student_id, contest_id: 1 }),
     });
-    const r = await fetch("http://localhost:5000/api/owner/registrations", { headers: { Authorization: `Bearer ${getToken()}` } });
+    const r = await fetch(apiUrl("/api/owner/registrations"), { headers: { Authorization: `Bearer ${getToken()}` } });
     const d = await r.json();
     if (d.success) setStudents(d.students || d.registrations || []);
     showFeedback("success", "Payment marked");
@@ -453,3 +453,11 @@ export default function OwnerDashboard() {
     </main>
   );
 }
+function apiUrl(path: string): string {
+  // If path is already a full URL, return as is
+  if (/^https?:\/\//.test(path)) return path;
+  // Otherwise, prefix with backend API base (adjust as needed)
+  const base = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+  return path.startsWith("/") ? base + path : `${base}/${path}`;
+}
+

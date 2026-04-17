@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiUrl } from "../../../utils/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
@@ -34,7 +35,7 @@ export default function ContestQuestions() {
 
   useEffect(() => {
     if (!contestId) return;
-    fetch(`http://localhost:5000/api/contest/${contestId}/questions`, { headers: authHeader() })
+    fetch(apiUrl(`/api/contest/${contestId}/questions`), { headers: authHeader() })
       .then(r => r.json())
       .then(d => {
         if (d.success) setQuestions(d.questions || []);

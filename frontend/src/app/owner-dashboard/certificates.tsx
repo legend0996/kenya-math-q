@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiUrl } from "../../utils/api";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Spinner, PageSpinner } from "../../components/ui/Spinner";
@@ -21,7 +22,7 @@ export default function CertificateManager() {
   });
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/owner/contest/all", { headers: authHeader() })
+    fetch(apiUrl("/api/owner/contest/all"), { headers: authHeader() })
       .then(r => r.json())
       .then(d => { if (d.success) setContests(d.contests || []); })
       .finally(() => setLoading(false));
@@ -30,7 +31,7 @@ export default function CertificateManager() {
   const fetchParticipants = async (contestId: number) => {
     setLoading(true);
     setSelected(contestId);
-    const r = await fetch(`http://localhost:5000/api/owner/contest/${contestId}/participants`, { headers: authHeader() });
+    const r = await fetch(apiUrl(`/api/owner/contest/${contestId}/participants`), { headers: authHeader() });
     const d = await r.json();
     setParticipants(d.participants || []);
     setLoading(false);
@@ -39,7 +40,7 @@ export default function CertificateManager() {
   const generateCertificates = async () => {
     setGenerating(true);
     try {
-      const r = await fetch(`http://localhost:5000/api/owner/contest/${selected}/generate-certificates`, {
+      const r = await fetch(apiUrl(`/api/owner/contest/${selected}/generate-certificates`), {
         method: "POST", headers: authHeader(),
       });
       const d = await r.json();
@@ -60,7 +61,7 @@ export default function CertificateManager() {
   };
 
   const downloadCertificate = async (participantId: number) => {
-    const r = await fetch(`http://localhost:5000/api/owner/certificate/${participantId}/download`, { headers: authHeader() });
+    const r = await fetch(apiUrl(`/api/owner/certificate/${participantId}/download`), { headers: authHeader() });
     const blob = await r.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");

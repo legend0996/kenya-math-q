@@ -19,8 +19,8 @@ export default function Login() {
 
     const endpoint =
       type === "student"
-        ? "http://localhost:5000/api/auth/student/login"
-        : "http://localhost:5000/api/auth/school/login";
+        ? apiUrl("/api/auth/student/login")
+        : apiUrl("/api/auth/school/login");
 
     try {
       const res  = await fetch(endpoint, {

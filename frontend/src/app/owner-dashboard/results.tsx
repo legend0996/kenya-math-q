@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
+import { apiUrl } from "../../utils/api";
 import { Spinner, PageSpinner } from "../../components/ui/Spinner";
 
 export default function ResultsManagement() {
@@ -21,7 +22,7 @@ export default function ResultsManagement() {
   });
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/owner/contest/all", { headers: authHeader() })
+    fetch(apiUrl("/api/owner/contest/all"), { headers: authHeader() })
       .then(r => r.json())
       .then(d => { if (d.success) setContests(d.contests || []); })
       .finally(() => setLoading(false));
@@ -30,7 +31,7 @@ export default function ResultsManagement() {
   const releaseResults = async (contestId: number) => {
     setReleasing(true);
     try {
-      const r = await fetch(`http://localhost:5000/api/owner/contest/${contestId}/release-results`, {
+      const r = await fetch(apiUrl(`/api/owner/contest/${contestId}/release-results`), {
         method: "POST", headers: authHeader(),
       });
       const d = await r.json();

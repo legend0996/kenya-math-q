@@ -24,7 +24,7 @@ export default function Home() {
   const [contact, setContact] = useState({ name: "", email: "", message: "" });
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/contest/current")
+    fetch(apiUrl("/api/contest/current"))
       .then((r) => r.json())
       .then((d) => setContest(d.status ? d : { status: "none" }))
       .catch(() => setContest({ status: "none" }));

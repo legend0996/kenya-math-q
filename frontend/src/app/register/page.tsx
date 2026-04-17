@@ -34,8 +34,8 @@ export default function Register() {
 
     const endpoint =
       type === "student"
-        ? "http://localhost:5000/api/auth/student/register"
-        : "http://localhost:5000/api/auth/school/register";
+        ? apiUrl("/api/auth/student/register")
+        : apiUrl("/api/auth/school/register");
 
     try {
       const res  = await fetch(endpoint, {

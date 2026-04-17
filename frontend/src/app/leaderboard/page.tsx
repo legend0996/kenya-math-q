@@ -44,7 +44,7 @@ export default function Leaderboard() {
   useEffect(() => {
     setLoading(true);
     const user = getUser();
-    let url = `http://localhost:5000/api/leaderboard?contest_id=${contest_id}`;
+    let url = apiUrl(`/api/leaderboard?contest_id=${contest_id}`);
     if (user?.id)     url += `&student_id=${user.id}`;
     if (type === "school" && user?.school) url += `&type=school&school=${encodeURIComponent(user.school)}`;
     if (type === "class"  && user?.grade)  url += `&type=class&grade=${encodeURIComponent(user.grade)}`;
@@ -197,3 +197,12 @@ export default function Leaderboard() {
     </main>
   );
 }
+function apiUrl(path: string) {
+  // Prefix with NEXT_PUBLIC_API_URL if set, else use relative path
+  const base = process.env.NEXT_PUBLIC_API_URL || "";
+  if (path.startsWith("/")) {
+    return base + path;
+  }
+  return base + "/" + path;
+}
+
