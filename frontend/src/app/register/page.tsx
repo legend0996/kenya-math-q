@@ -4,6 +4,7 @@ import { useState } from "react";
 import { UserPlus, GraduationCap, School, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { Button } from "../../components/ui/Button";
+import { apiUrl } from "../../utils/api";
 
 const GRADES = ["Grade 7", "Grade 8", "Grade 9", "Form 1", "Form 2", "Form 3", "Form 4"];
 const COUNTIES = [
