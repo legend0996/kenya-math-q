@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiUrl } from "../../utils/api";
 import { Clock, ChevronRight, Send, AlertTriangle, CheckCircle2, ChevronLeft } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { PageSpinner } from "../../components/ui/Spinner";
