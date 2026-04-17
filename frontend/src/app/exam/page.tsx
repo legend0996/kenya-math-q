@@ -24,6 +24,7 @@ function formatTime(seconds: number) {
   return `${m}:${s}`;
 }
 
+
 export default function Exam() {
   const [questions, setQuestions]     = useState<Question[]>([]);
   const [answers, setAnswers]         = useState<Record<number, string>>({});
@@ -32,21 +33,25 @@ export default function Exam() {
   const [submitted, setSubmitted]     = useState(false);
   const [loading, setLoading]         = useState(true);
   const [submitting, setSubmitting]   = useState(false);
+  const [studentId, setStudentId]     = useState<number|null>(null);
 
   const contest_id = 1;
 
-  const getStudentId = () => {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const token = localStorage.getItem("token");
-    if (!token) return null;
-    try { return JSON.parse(atob(token.split(".")[1])).id; } catch { return null; }
-  };
-
-  const student_id = getStudentId();
+    if (!token) { window.location.href = "/login"; return; }
+    try {
+      const id = JSON.parse(atob(token.split(".")[1])).id;
+      setStudentId(id);
+    } catch {
+      window.location.href = "/login";
+    }
+  }, []);
 
   useEffect(() => {
-    if (!student_id) { window.location.href = "/login"; return; }
-
-    fetch(apiUrl(`/api/exam/${contest_id}/${student_id}`))
+    if (studentId == null) return;
+    fetch(apiUrl(`/api/exam/${contest_id}/${studentId}`))
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) { alert(data.error || "Access denied"); window.location.href = "/dashboard"; return; }
@@ -54,7 +59,7 @@ export default function Exam() {
       })
       .catch(() => { alert("Error loading exam"); window.location.href = "/dashboard"; })
       .finally(() => setLoading(false));
-  }, [student_id]);
+  }, [studentId]);
 
   useEffect(() => {
     if (submitted || loading) return;
@@ -87,7 +92,7 @@ export default function Exam() {
       await fetch(apiUrl("/api/exam/submit"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student_id, contest_id, answers: formatted }),
+        body: JSON.stringify({ student_id: studentId, contest_id, answers: formatted }),
       });
       alert("✅ Exam submitted successfully!");
       window.location.href = "/dashboard";
