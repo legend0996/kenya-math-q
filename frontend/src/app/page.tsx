@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
+import { apiUrl } from "../utils/api";
 
 const HOW_IT_WORKS = [
   { icon: <Users size={24} />,       step: "01", title: "Create Account",     desc: "Sign up as a student or school administrator in minutes." },
