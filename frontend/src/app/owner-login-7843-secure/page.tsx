@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiUrl } from "../../utils/api";
 import { LogIn, Eye, EyeOff, Shield } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 
