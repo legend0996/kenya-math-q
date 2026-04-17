@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiUrl } from "../../utils/api";
 import { useRouter } from "next/navigation";
 import {
   Trophy, BookOpen, Award, BarChart2, Calendar,
