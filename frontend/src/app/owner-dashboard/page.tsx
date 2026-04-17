@@ -10,8 +10,10 @@ import { Button } from "../../components/ui/Button";
 import { Card, StatCard } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { PageSpinner } from "../../components/ui/Spinner";
+import ResultsManagement from "./results";
+import CertificateManager from "./certificates";
 
-type Tab = "overview" | "schools" | "contests" | "questions" | "payments";
+type Tab = "overview" | "schools" | "contests" | "questions" | "payments" | "results" | "certificates";
 
 const TABS: { key: Tab; label: string; Icon: any }[] = [
   { key: "overview",   label: "Overview",   Icon: BarChart2 },
@@ -19,6 +21,8 @@ const TABS: { key: Tab; label: string; Icon: any }[] = [
   { key: "contests",   label: "Contests",   Icon: Trophy },
   { key: "questions",  label: "Questions",  Icon: FileQuestion },
   { key: "payments",   label: "Payments",   Icon: CreditCard },
+  { key: "results",    label: "Results",    Icon: CheckCircle2 },
+  { key: "certificates",label: "Certificates",Icon: FileQuestion },
 ];
 
 const GRADES = ["Grade 7","Grade 8","Grade 9","Form 1","Form 2","Form 3","Form 4"];
@@ -34,6 +38,8 @@ export default function OwnerDashboard() {
 
   // Contest form
   const [contestName, setContestName] = useState("");
+  const [contestDate, setContestDate] = useState<string>("");
+  const [contestTime, setContestTime] = useState<string>("");
 
   // Question form
   const [grade, setGrade]           = useState("Form 1");
@@ -88,12 +94,13 @@ export default function OwnerDashboard() {
   };
 
   const handleCreateContest = async () => {
-    if (!contestName.trim()) return;
+    if (!contestName.trim() || !contestDate || !contestTime) return;
+    const dateTime = `${contestDate}T${contestTime}`;
     await fetch("http://localhost:5000/api/owner/contest/create", {
       method: "POST", headers: authHeader(),
-      body: JSON.stringify({ name: contestName, contest_number: 1, year: new Date().getFullYear() }),
+      body: JSON.stringify({ name: contestName, contest_number: 1, year: new Date().getFullYear(), scheduled_at: dateTime }),
     });
-    setContestName("");
+    setContestName(""); setContestDate(""); setContestTime("");
     const r = await fetch("http://localhost:5000/api/owner/contest/all", { headers: { Authorization: `Bearer ${getToken()}` } });
     const d = await r.json();
     if (d.success) setContests(d.contests || []);
@@ -265,12 +272,25 @@ export default function OwnerDashboard() {
               <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <Plus size={18} className="text-blue-600" /> Create New Contest
               </h2>
-              <div className="flex gap-3">
+              <div className="flex flex-col md:flex-row gap-3">
                 <input
                   placeholder="Contest name (e.g. Round 1 — 2026)"
                   value={contestName}
                   onChange={(e) => setContestName(e.target.value)}
                   className="flex-1 px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                />
+                <input
+                  type="date"
+                  min={new Date().toISOString().split("T")[0]}
+                  value={contestDate}
+                  onChange={(e) => setContestDate(e.target.value)}
+                  className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                />
+                <input
+                  type="time"
+                  value={contestTime}
+                  onChange={(e) => setContestTime(e.target.value)}
+                  className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                 />
                 <Button icon={<Plus size={15} />} onClick={handleCreateContest}>Create</Button>
               </div>
@@ -424,6 +444,11 @@ export default function OwnerDashboard() {
             )}
           </Card>
         )}
+
+        {/* ── Results ── */}
+        {tab === "results" && <ResultsManagement />}
+        {/* ── Certificates ── */}
+        {tab === "certificates" && <CertificateManager />}
       </div>
     </main>
   );

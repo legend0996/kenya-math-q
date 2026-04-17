@@ -22,9 +22,9 @@ const TABS = [
 ];
 
 const RANK_STYLES = [
-  "bg-gradient-to-br from-amber-400  to-amber-500  text-white shadow-amber-200",
-  "bg-gradient-to-br from-slate-300  to-slate-400  text-white shadow-slate-200",
-  "bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-orange-200",
+  "bg-linear-to-br from-amber-400  to-amber-500  text-white shadow-amber-200",
+  "bg-linear-to-br from-slate-300  to-slate-400  text-white shadow-slate-200",
+  "bg-linear-to-br from-orange-400 to-orange-500 text-white shadow-orange-200",
 ];
 
 export default function Leaderboard() {
@@ -95,7 +95,7 @@ export default function Leaderboard() {
           <>
             {/* My Rank */}
             {myRank && (
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-center gap-4 shadow-lg shadow-blue-200">
+              <div className="bg-linear-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-center gap-4 shadow-lg shadow-blue-200">
                 <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
                   <Star size={24} className="text-amber-300" />
                 </div>
