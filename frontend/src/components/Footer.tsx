@@ -85,6 +85,25 @@ export default function Footer() {
           </div>
         </div>
       </div>
+      {/* Credit Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="border-t border-slate-800 mt-6 pt-4 pb-6">
+          <div className="flex flex-col items-center justify-center">
+            <a
+              href="https://codesolveafrica.co.ke"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-slate-400 hover:text-blue-400 font-medium mb-1 transition-colors text-center"
+              style={{ textDecoration: "none" }}
+            >
+              © CodeSolveAfrica.co.ke
+            </a>
+            <span className="text-xs text-slate-500 flex items-center gap-1" style={{ letterSpacing: 0.2 }}>
+              Made with <span aria-label="love" className="text-red-400">❤️</span> by Code Solve Africa
+            </span>
+          </div>
+        </div>
+      </div>
     </footer>
   );
 }
