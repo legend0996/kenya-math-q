@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiUrl } from "../../utils/api";
 import { LogIn, GraduationCap, School, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { Button } from "../../components/ui/Button";
