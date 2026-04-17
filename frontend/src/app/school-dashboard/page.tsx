@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { Card, StatCard } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { PageSpinner } from "../../components/ui/Spinner";
+import { apiUrl } from "../../utils/api";
 
 type Student = { id: number; full_name: string; grade: string; registered?: boolean; paid?: boolean };
 
