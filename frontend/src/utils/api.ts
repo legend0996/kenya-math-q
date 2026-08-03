@@ -1,5 +1,5 @@
 // Central API utility for base URL
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.kenyamathquest.co.ke";
+export const API_BASE = import.meta.env.VITE_API_URL || "https://api.kenyamathquest.co.ke";
 
 export function apiUrl(path: string) {
   if (/^https?:\/\//.test(path)) return path;

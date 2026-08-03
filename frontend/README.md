@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kenya Math Quest — Frontend
+
+Static React single-page app for the Kenya Math Quest national mathematics competition. Built with Vite, React 19, React Router v7, Tailwind CSS v4, and Zustand.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the printed localhost URL (default `http://localhost:5173`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Building
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+```
 
-## Learn More
+Outputs a fully static site to `dist/` (single `index.html` + hashed assets). No per-route HTML files are generated.
 
-To learn more about Next.js, take a look at the following resources:
+## Deploying
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The app is a client-side SPA. Host the contents of `dist/` on any static host and add a fallback to `index.html` for unknown paths:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Shared hosting (Apache)**: put `dist/` contents in the web root and add an `.htaccess`:
+  ```apache
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.html [L]
+  ```
+- **Nginx**:
+  ```nginx
+  location / {
+    try_files $uri /index.html;
+  }
+  ```
 
-## Deploy on Vercel
+Point the frontend at the API by setting `VITE_API_URL` at build time (e.g. in `.env.production`); it falls back to `https://api.kenyamathquest.co.ke`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/App.tsx` — route definitions
+- `src/pages/` — route components (top-level and `owner-dashboard/`)
+- `src/components/` — shared components (`ui/` holds Button, Card, Badge, Input, Spinner)
+- `src/utils/api.ts` — API client
+- `public/` — static assets (`logo.jpeg`, `favicon.ico`)

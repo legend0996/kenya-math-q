@@ -1,15 +1,23 @@
 services:
   - type: web
     name: frontend
-    env: node
+    env: static
     plan: free
     buildCommand: npm run build
-    startCommand: npm start
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: NODE_VERSION
         value: 20
       # Public URL of the deployed backend — set this in the Render dashboard
-      - key: NEXT_PUBLIC_API_URL
+      - key: VITE_API_URL
         sync: false
     autoDeploy: true
     rootDir: frontend

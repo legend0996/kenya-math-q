@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { Menu, X, LayoutDashboard, LogIn, UserPlus, User } from "lucide-react";
-import Image from "next/image";
+import Image from "./Image";
 
 type User = { role?: string; name?: string };
 
@@ -61,13 +61,12 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
 
         {/* ── Logo ── */}
-        <Link href="/" className="flex items-center gap-2.5 group">
+        <Link to="/" className="flex items-center gap-2.5 group">
           <Image
             src="/logo.jpeg"
             alt="Kenya Math Quest"
-            width={44}
-            height={44}
             className="rounded-full shadow-md ring-2 ring-slate-200 group-hover:ring-blue-300 transition-all"
+            style={{ width: 44, height: 44 }}
           />
           <span className="font-bold text-slate-900 text-lg hidden sm:block tracking-tight">
             Kenya<span className="text-blue-600">Math</span>Quest
