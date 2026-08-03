@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import {
   BarChart2, School, Trophy, CreditCard, FileQuestion,
+  FlaskConical, ShieldCheck, MessageSquare, PencilRuler,
   CheckCircle2, XCircle, Play, LogOut, Plus, Users, ChevronRight,
-  AlertCircle,
+  AlertCircle, Clock, ImageIcon, FileText, BookOpen, Bot, type LucideIcon,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { Card, StatCard } from "../../components/ui/Card";
@@ -12,55 +13,89 @@ import { Badge } from "../../components/ui/Badge";
 import { PageSpinner } from "../../components/ui/Spinner";
 import ResultsManagement from "./results";
 import CertificateManager from "./certificates";
+import TestContests from "./testContests";
+import AdminManagement from "./admins";
+import SupportManager from "./supportManager";
+import Marking from "./marking";
+import InstructionsManager from "./instructions";
+import MaterialsManager from "./materials";
+import AssistantManager from "./assistant";
+import { apiUrl, authHeaders, getToken } from "../../utils/api";
 
-type Tab = "overview" | "schools" | "contests" | "questions" | "payments" | "results" | "certificates";
+type Tab = "overview" | "schools" | "contests" | "questions" | "payments" | "results" | "certificates" | "test" | "admins" | "support" | "marking" | "instructions" | "materials" | "assistant";
 
-const TABS: { key: Tab; label: string; Icon: any }[] = [
-  { key: "overview",   label: "Overview",   Icon: BarChart2 },
-  { key: "schools",    label: "Schools",    Icon: School },
-  { key: "contests",   label: "Contests",   Icon: Trophy },
-  { key: "questions",  label: "Questions",  Icon: FileQuestion },
-  { key: "payments",   label: "Payments",   Icon: CreditCard },
-  { key: "results",    label: "Results",    Icon: CheckCircle2 },
-  { key: "certificates",label: "Certificates",Icon: FileQuestion },
+type Stats = { students: number; schools: number; registered: number; paid: number; pending_payments: number };
+type SchoolRow = { id: number; name: string; email: string; county: string; status: string };
+type ContestRow = { id: number; name: string; year: number; status: string; registration_open: boolean; start_time?: string; entry_fee?: number | string | null };
+type StudentRow = { id: number; full_name?: string; name?: string; school: string; grade: string; paid: boolean };
+type PaymentRow = { id: number; full_name?: string; school?: string; mpesa_code?: string; proof_text?: string };
+
+const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
+  { key: "overview", label: "Overview", Icon: BarChart2 },
+  { key: "schools", label: "Schools", Icon: School },
+  { key: "contests", label: "Contests", Icon: Trophy },
+  { key: "questions", label: "Questions", Icon: FileQuestion },
+  { key: "instructions", label: "Instructions", Icon: FileText },
+  { key: "materials", label: "Materials", Icon: BookOpen },
+  { key: "payments", label: "Payments", Icon: CreditCard },
+  { key: "results", label: "Results", Icon: CheckCircle2 },
+  { key: "certificates", label: "Certificates", Icon: ImageIcon },
+  { key: "test", label: "Test Contests", Icon: FlaskConical },
+  { key: "admins", label: "Admins", Icon: ShieldCheck },
+  { key: "assistant", label: "Assistant", Icon: Bot },
+  { key: "support", label: "Support", Icon: MessageSquare },
+  { key: "marking", label: "Marking", Icon: PencilRuler },
 ];
 
-const GRADES = ["Grade 7","Grade 8","Grade 9","Form 1","Form 2","Form 3","Form 4"];
+const GRADES = ["Grade 7", "Grade 8", "Grade 9", "Form 1", "Form 2", "Form 3", "Form 4"];
+
+const PERM: Record<string, Tab[]> = {
+  manage_schools: ["schools"],
+  manage_contests: ["contests", "payments"],
+  manage_questions: ["questions", "test", "instructions", "materials"],
+  manage_results: ["results", "marking"],
+  manage_admin: ["admins"],
+  reply_support: ["support", "assistant"],
+};
 
 export default function OwnerDashboard() {
-  const [tab, setTab]           = useState<Tab>("overview");
-  const [stats, setStats]       = useState<any>(null);
-  const [schools, setSchools]   = useState<any[]>([]);
-  const [contests, setContests] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+  const [tab, setTab] = useState<Tab>("overview");
+  const [perms, setPerms] = useState<string[]>([]);
+  const [isPrimary, setIsPrimary] = useState(false);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [schools, setSchools] = useState<SchoolRow[]>([]);
+  const [contests, setContests] = useState<ContestRow[]>([]);
+  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [pendingPays, setPendingPays] = useState<PaymentRow[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
-  const [feedback, setFeedback] = useState<{ type: "success"|"error"; msg: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   // Contest form
   const [contestName, setContestName] = useState("");
   const [contestDate, setContestDate] = useState<string>("");
   const [contestTime, setContestTime] = useState<string>("");
+  const [contestFee, setContestFee] = useState<string>("");
+  const [feeInputs, setFeeInputs] = useState<Record<number, string>>({});
+
+  // Grade times editor
+  const [timesContest, setTimesContest] = useState<ContestRow | null>(null);
+  const [times, setTimes] = useState<Record<string, number>>({});
+  const [savingTimes, setSavingTimes] = useState(false);
 
   // Question form
-  const [grade, setGrade]           = useState("Form 1");
-  const [qType, setQType]           = useState("mcq");
-  const [question, setQuestion]     = useState("");
-  const [option_a, setOptionA]      = useState("");
-  const [option_b, setOptionB]      = useState("");
-  const [option_c, setOptionC]      = useState("");
-  const [option_d, setOptionD]      = useState("");
+  const [grade, setGrade] = useState("Form 1");
+  const [qType, setQType] = useState("mcq");
+  const [question, setQuestion] = useState("");
+  const [option_a, setOptionA] = useState("");
+  const [option_b, setOptionB] = useState("");
+  const [option_c, setOptionC] = useState("");
+  const [option_d, setOptionD] = useState("");
   const [correct_answer, setCorrect] = useState("");
-  const [marks, setMarks]           = useState(1);
-  const [addingQ, setAddingQ]       = useState(false);
+  const [marks, setMarks] = useState(1);
+  const [workingSpace, setWorkingSpace] = useState(240);
+  const [addingQ, setAddingQ] = useState(false);
 
-  const getToken = () => localStorage.getItem("token") || "";
-
-  const authHeader = () => ({
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${getToken()}`,
-  });
-
-  const showFeedback = (type: "success"|"error", msg: string) => {
+  const showFeedback = (type: "success" | "error", msg: string) => {
     setFeedback({ type, msg });
     setTimeout(() => setFeedback(null), 3500);
   };
@@ -70,24 +105,28 @@ export default function OwnerDashboard() {
     if (!token) { window.location.href = "/owner-login-7843-secure"; return; }
 
     Promise.all([
-      fetch(apiUrl("/api/owner/stats"),             { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch(apiUrl("/api/owner/schools/pending"),   { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch(apiUrl("/api/owner/contest/all"),       { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-      fetch(apiUrl("/api/owner/registrations"),     { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
-    ]).then(([s, sc, co, st]) => {
-      if (s.success)  setStats(s.stats);
+      fetch(apiUrl("/api/owner/stats"), { headers: authHeaders() }).then((r) => r.json()),
+      fetch(apiUrl("/api/owner/schools/pending"), { headers: authHeaders() }).then((r) => r.json()),
+      fetch(apiUrl("/api/owner/contest/all"), { headers: authHeaders() }).then((r) => r.json()),
+      fetch(apiUrl("/api/owner/registrations"), { headers: authHeaders() }).then((r) => r.json()),
+      fetch(apiUrl("/api/payment/pending"), { headers: authHeaders() }).then((r) => r.json()),
+      fetch(apiUrl("/api/owner/me"), { headers: authHeaders() }).then((r) => r.json()),
+    ]).then(([s, sc, co, st, pp, me]) => {
+      if (s.success) setStats(s.stats);
       if (sc.success) setSchools(sc.schools || []);
       if (co.success) setContests(co.contests || []);
       if (st.success) setStudents(st.students || st.registrations || []);
+      if (pp.success) setPendingPays(pp.payments || []);
+      if (me?.success) { setPerms(me.owner?.permissions || []); setIsPrimary(!!me.owner?.is_primary); }
     }).finally(() => setPageLoading(false));
   }, []);
 
   const updateSchoolStatus = async (id: number, status: string) => {
     await fetch(apiUrl("/api/owner/schools/update"), {
-      method: "POST", headers: authHeader(),
+      method: "POST", headers: authHeaders(),
       body: JSON.stringify({ school_id: id, status }),
     });
-    const r = await fetch(apiUrl("/api/owner/schools/pending"), { headers: { Authorization: `Bearer ${getToken()}` } });
+    const r = await fetch(apiUrl("/api/owner/schools/pending"), { headers: authHeaders() });
     const d = await r.json();
     if (d.success) setSchools(d.schools || []);
     showFeedback("success", `School ${status === "approved" ? "approved" : "rejected"}`);
@@ -95,55 +134,149 @@ export default function OwnerDashboard() {
 
   const handleCreateContest = async () => {
     if (!contestName.trim() || !contestDate || !contestTime) return;
-    const dateTime = `${contestDate}T${contestTime}`;
-    await fetch(apiUrl("/api/owner/contest/create"), {
-      method: "POST", headers: authHeader(),
-      body: JSON.stringify({ name: contestName, contest_number: 1, year: new Date().getFullYear(), scheduled_at: dateTime }),
+    const start = new Date(`${contestDate}T${contestTime}`);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    const res = await fetch(apiUrl("/api/owner/contest/create"), {
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({
+        name: contestName,
+        contest_number: 1,
+        year: new Date().getFullYear(),
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        entry_fee: contestFee ? Number(contestFee) : undefined,
+      }),
     });
-    setContestName(""); setContestDate(""); setContestTime("");
-    const r = await fetch(apiUrl("/api/owner/contest/all"), { headers: { Authorization: `Bearer ${getToken()}` } });
-    const d = await r.json();
-    if (d.success) setContests(d.contests || []);
-    showFeedback("success", "Contest created successfully");
+    const d = await res.json();
+    if (d.success) {
+      setContestName(""); setContestDate(""); setContestTime(""); setContestFee("");
+      const r = await fetch(apiUrl("/api/owner/contest/all"), { headers: authHeaders() });
+      const dd = await r.json();
+      if (dd.success) setContests(dd.contests || []);
+      showFeedback("success", "Contest created successfully");
+    } else {
+      showFeedback("error", d.error || "Failed to create contest");
+    }
   };
 
   const activateContest = async (id: number) => {
     await fetch(apiUrl("/api/owner/contest/activate"), {
-      method: "POST", headers: authHeader(),
+      method: "POST", headers: authHeaders(),
       body: JSON.stringify({ contest_id: id }),
     });
-    const r = await fetch(apiUrl("/api/owner/contest/all"), { headers: { Authorization: `Bearer ${getToken()}` } });
+    const r = await fetch(apiUrl("/api/owner/contest/all"), { headers: authHeaders() });
     const d = await r.json();
     if (d.success) setContests(d.contests || []);
     showFeedback("success", "Contest activated");
+  };
+
+  const setWindow = async (id: number, open: boolean) => {
+    await fetch(apiUrl("/api/owner/contest/window"), {
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({ contest_id: id, registration_open: open }),
+    });
+    const r = await fetch(apiUrl("/api/owner/contest/all"), { headers: authHeaders() });
+    const d = await r.json();
+    if (d.success) setContests(d.contests || []);
+    showFeedback("success", open ? "Registration opened" : "Registration closed");
+  };
+
+  const updateFee = async (id: number) => {
+    const val = Number(feeInputs[id]);
+    if (val == null || Number.isNaN(val)) return;
+    const res = await fetch(apiUrl("/api/owner/contest/fee"), {
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({ contest_id: id, entry_fee: val }),
+    });
+    const d = await res.json();
+    showFeedback(d.success ? "success" : "error", d.message || d.error);
+    const r = await fetch(apiUrl("/api/owner/contest/all"), { headers: authHeaders() });
+    const dd = await r.json();
+    if (dd.success) setContests(dd.contests || []);
+    setFeeInputs((p) => { const n = { ...p }; delete n[id]; return n; });
+  };
+
+  const openTimes = async (c: ContestRow) => {
+    setTimesContest(c);
+    const r = await fetch(apiUrl(`/api/owner/contest/papers/${c.id}`), { headers: authHeaders() });
+    const d = await r.json();
+    const map: Record<string, number> = {};
+    (d.papers || []).forEach((p: { grade: string; duration_minutes: number }) => { map[p.grade] = p.duration_minutes; });
+    GRADES.forEach((g) => { if (!map[g]) map[g] = 10; });
+    setTimes(map);
+  };
+
+  const saveTimes = async () => {
+    if (!timesContest) return;
+    setSavingTimes(true);
+    const papers = GRADES.map((g) => ({ grade: g, duration_minutes: Number(times[g]) || 10 }));
+    const res = await fetch(apiUrl("/api/owner/contest/papers"), {
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({ contest_id: timesContest.id, papers }),
+    });
+    const d = await res.json();
+    setSavingTimes(false);
+    if (d.success) {
+      showFeedback("success", "Grade times saved");
+      setTimesContest(null);
+    } else {
+      showFeedback("error", d.error || "Failed to save");
+    }
   };
 
   const handleAddQuestion = async () => {
     if (!question.trim() || !correct_answer.trim()) return;
     setAddingQ(true);
     try {
-      await fetch(apiUrl("/api/owner/question/create"), {
-        method: "POST", headers: authHeader(),
-        body: JSON.stringify({ contest_id: 1, grade, type: qType, question, option_a, option_b, option_c, option_d, correct_answer, marks }),
+      const res = await fetch(apiUrl("/api/owner/question/create"), {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({
+          contest_id: contests[0]?.id || 1, grade, type: qType, question,
+          option_a, option_b, option_c, option_d, correct_answer, marks,
+          working_space: workingSpace,
+        }),
       });
-      showFeedback("success", "Question added successfully");
-      setQuestion(""); setOptionA(""); setOptionB(""); setOptionC(""); setOptionD(""); setCorrect(""); setMarks(1);
+      const d = await res.json();
+      if (d.success) {
+        showFeedback("success", "Question added successfully");
+        setQuestion(""); setOptionA(""); setOptionB(""); setOptionC(""); setOptionD(""); setCorrect(""); setMarks(1); setWorkingSpace(240);
+      } else {
+        showFeedback("error", d.error || "Failed to add question");
+      }
     } catch { showFeedback("error", "Failed to add question"); }
     finally { setAddingQ(false); }
   };
 
   const markPaid = async (student_id: number) => {
+    const contestId = contests.find((c) => c.registration_open)?.id || contests[0]?.id || 1;
     await fetch(apiUrl("/api/owner/payment/mark"), {
-      method: "POST", headers: authHeader(),
-      body: JSON.stringify({ student_id, contest_id: 1 }),
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({ student_id, contest_id: contestId }),
     });
-    const r = await fetch(apiUrl("/api/owner/registrations"), { headers: { Authorization: `Bearer ${getToken()}` } });
+    const r = await fetch(apiUrl("/api/owner/registrations"), { headers: authHeaders() });
     const d = await r.json();
     if (d.success) setStudents(d.students || d.registrations || []);
     showFeedback("success", "Payment marked");
   };
 
+  const reviewPayment = async (paymentId: number, status: string) => {
+    const res = await fetch(apiUrl("/api/payment/verify"), {
+      method: "POST", headers: authHeaders(),
+      body: JSON.stringify({ payment_id: paymentId, status }),
+    });
+    const d = await res.json();
+    if (d.success) {
+      setPendingPays((p) => p.filter((x) => x.id !== paymentId));
+      showFeedback("success", status === "paid" ? "Payment approved" : "Payment rejected");
+    } else {
+      showFeedback("error", d.error || "Failed to update");
+    }
+  };
+
   if (pageLoading) return <PageSpinner message="Loading admin dashboard…" />;
+
+  const can = (t: Tab) => isPrimary || perms.some((p) => (PERM[p] || []).includes(t));
+  const visibleTabs = TABS.filter(({ key }) => key === "overview" || can(key));
 
   return (
     <main className="pt-16 min-h-screen bg-slate-50">
@@ -176,7 +309,7 @@ export default function OwnerDashboard() {
 
         {/* Tabs */}
         <div className="flex bg-white rounded-2xl border border-slate-100 shadow-sm p-1.5 mb-8 overflow-x-auto gap-1">
-          {TABS.map(({ key, label, Icon }) => (
+          {visibleTabs.map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -195,18 +328,25 @@ export default function OwnerDashboard() {
         {tab === "overview" && stats && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label="Students"   value={stats.students}   icon={<Users size={22} />} />
-              <StatCard label="Schools"    value={stats.schools}    icon={<School size={22} />} accent="text-violet-600" />
+              <StatCard label="Students" value={stats.students} icon={<Users size={22} />} />
+              <StatCard label="Schools" value={stats.schools} icon={<School size={22} />} accent="text-violet-600" />
               <StatCard label="Registered" value={stats.registered} icon={<CheckCircle2 size={22} />} accent="text-emerald-600" />
-              <StatCard label="Paid"       value={stats.paid}       icon={<CreditCard size={22} />} accent="text-amber-600" />
+              <StatCard label="Paid" value={stats.paid} icon={<CreditCard size={22} />} accent="text-amber-600" />
             </div>
-
+            {stats.pending_payments > 0 && (
+              <button onClick={() => setTab("payments")}
+                className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl px-5 py-4 text-sm font-semibold hover:bg-amber-100 transition-colors">
+                <AlertCircle size={18} />
+                {stats.pending_payments} pending M-PESA payment(s) awaiting review
+                <ChevronRight size={16} className="ml-auto" />
+              </button>
+            )}
             <div className="grid sm:grid-cols-2 gap-4">
               {[
-                { tab: "schools"   as Tab, icon: <School size={20} />,      label: "Manage Schools",   desc: `${schools.length} pending approvals` },
-                { tab: "contests"  as Tab, icon: <Trophy size={20} />,      label: "Manage Contests",  desc: `${contests.length} total contests` },
-                { tab: "questions" as Tab, icon: <FileQuestion size={20} />, label: "Add Questions",   desc: "Build contest question bank" },
-                { tab: "payments"  as Tab, icon: <CreditCard size={20} />,  label: "Payments",         desc: `${students.length} registrations` },
+                { tab: "schools" as Tab, icon: <School size={20} />, label: "Manage Schools", desc: `${schools.length} pending approvals` },
+                { tab: "contests" as Tab, icon: <Trophy size={20} />, label: "Manage Contests", desc: `${contests.length} total contests` },
+                { tab: "questions" as Tab, icon: <FileQuestion size={20} />, label: "Add Questions", desc: "Build contest question bank" },
+                { tab: "certificates" as Tab, icon: <ImageIcon size={20} />, label: "Certificates", desc: "Design, publish & generate" },
               ].map((item) => (
                 <Card key={item.tab} hover onClick={() => setTab(item.tab)} className="flex items-center gap-4 cursor-pointer">
                   <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 text-blue-600">
@@ -232,7 +372,6 @@ export default function OwnerDashboard() {
               </h2>
               <Badge variant="warning">{schools.length} pending</Badge>
             </div>
-
             {schools.length === 0 ? (
               <div className="text-center py-14 text-slate-400">
                 <CheckCircle2 size={36} className="mx-auto mb-3 text-emerald-300" />
@@ -240,7 +379,7 @@ export default function OwnerDashboard() {
               </div>
             ) : (
               <div className="divide-y divide-slate-50">
-                {schools.map((s: any) => (
+                {schools.map((s) => (
                   <div key={s.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50">
                     <div>
                       <p className="font-semibold text-slate-900">{s.name}</p>
@@ -249,13 +388,9 @@ export default function OwnerDashboard() {
                     <div className="flex gap-2 shrink-0">
                       <Button size="sm" icon={<CheckCircle2 size={14} />}
                         className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
-                        onClick={() => updateSchoolStatus(s.id, "approved")}>
-                        Approve
-                      </Button>
+                        onClick={() => updateSchoolStatus(s.id, "approved")}>Approve</Button>
                       <Button size="sm" variant="danger" icon={<XCircle size={14} />}
-                        onClick={() => updateSchoolStatus(s.id, "rejected")}>
-                        Reject
-                      </Button>
+                        onClick={() => updateSchoolStatus(s.id, "rejected")}>Reject</Button>
                     </div>
                   </div>
                 ))}
@@ -267,7 +402,6 @@ export default function OwnerDashboard() {
         {/* ── Contests ── */}
         {tab === "contests" && (
           <div className="space-y-6">
-            {/* Create contest */}
             <Card>
               <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <Plus size={18} className="text-blue-600" /> Create New Contest
@@ -279,24 +413,26 @@ export default function OwnerDashboard() {
                   onChange={(e) => setContestName(e.target.value)}
                   className="flex-1 px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                 />
-                <input
-                  type="date"
+                <input type="date"
                   min={new Date().toISOString().split("T")[0]}
                   value={contestDate}
                   onChange={(e) => setContestDate(e.target.value)}
                   className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                 />
-                <input
-                  type="time"
+                <input type="time"
                   value={contestTime}
                   onChange={(e) => setContestTime(e.target.value)}
                   className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                />
+                <input type="number" min={0} placeholder="Entry fee KES"
+                  value={contestFee}
+                  onChange={(e) => setContestFee(e.target.value)}
+                  className="w-32 px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                 />
                 <Button icon={<Plus size={15} />} onClick={handleCreateContest}>Create</Button>
               </div>
             </Card>
 
-            {/* List */}
             <Card padding="none">
               <div className="px-6 py-4 border-b border-slate-100">
                 <h2 className="font-bold text-slate-900">All Contests</h2>
@@ -305,29 +441,73 @@ export default function OwnerDashboard() {
                 <div className="text-center py-10 text-slate-400"><Trophy size={32} className="mx-auto mb-2 opacity-30" /><p>No contests yet</p></div>
               ) : (
                 <div className="divide-y divide-slate-50">
-                  {contests.map((c: any) => (
-                    <div key={c.id} className="px-6 py-4 flex items-center justify-between gap-3 hover:bg-slate-50">
+                  {contests.map((c) => (
+                    <div key={c.id} className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50">
                       <div>
                         <p className="font-semibold text-slate-900">{c.name}</p>
-                        <p className="text-sm text-slate-500">{c.year}</p>
+                        <p className="text-sm text-slate-500">
+                          {c.year}
+                          {c.start_time ? ` • starts ${new Date(c.start_time).toLocaleString()}` : ""}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        {c.status === "live"     && <Badge variant="success" dot>Live</Badge>}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {c.status === "live" && <Badge variant="success" dot>Live</Badge>}
                         {c.status === "upcoming" && <Badge variant="info">Upcoming</Badge>}
-                        {c.status === "ended"    && <Badge variant="default">Ended</Badge>}
+                        {c.status === "ended" && <Badge variant="default">Ended</Badge>}
+                        {c.registration_open ? <Badge variant="success">Reg Open</Badge> : <Badge variant="default">Reg Closed</Badge>}
+                        <Button size="sm" variant="outline" icon={<Clock size={13} />} onClick={() => openTimes(c)}>
+                          Grade Times
+                        </Button>
+                        <span className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-600">
+                          Fee: KES {c.entry_fee ?? 0}
+                        </span>
+                        <input type="number" min={0} placeholder="new fee"
+                          value={feeInputs[c.id] ?? ""}
+                          onChange={(e) => setFeeInputs((p) => ({ ...p, [c.id]: e.target.value }))}
+                          className="w-20 px-2 py-1 text-xs rounded-lg border border-slate-200 outline-none"
+                        />
+                        <Button size="sm" variant="outline" onClick={() => updateFee(c.id)}>Set Fee</Button>
                         {c.status !== "live" && c.status !== "ended" && (
                           <Button size="sm" icon={<Play size={13} />}
                             className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
-                            onClick={() => activateContest(c.id)}>
-                            Activate
-                          </Button>
+                            onClick={() => activateContest(c.id)}>Activate</Button>
                         )}
+                        <Button size="sm" variant={c.registration_open ? "danger" : "secondary"}
+                          onClick={() => setWindow(c.id, !c.registration_open)}>
+                          {c.registration_open ? "Close" : "Open"} Reg
+                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </Card>
+
+            {/* Grade times editor */}
+            {timesContest && (
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-bold text-slate-900 flex items-center gap-2">
+                    <Clock size={18} className="text-blue-600" /> Exam Duration — {timesContest.name}
+                  </h2>
+                  <Button variant="ghost" size="sm" onClick={() => setTimesContest(null)}>✕ Close</Button>
+                </div>
+                <p className="text-sm text-slate-500 mb-4">Set the time allowed for each grade&apos;s paper (minutes).</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {GRADES.map((g) => (
+                    <div key={g}>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">{g}</label>
+                      <input type="number" min={1} max={240} value={times[g] ?? 10}
+                        onChange={(e) => setTimes({ ...times, [g]: Number(e.target.value) })}
+                        className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5">
+                  <Button loading={savingTimes} icon={<CheckCircle2 size={15} />} onClick={saveTimes}>Save Grade Times</Button>
+                </div>
+              </Card>
+            )}
           </div>
         )}
 
@@ -337,7 +517,6 @@ export default function OwnerDashboard() {
             <h2 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
               <FileQuestion size={18} className="text-blue-600" /> Add Question to Contest
             </h2>
-
             <div className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
@@ -353,6 +532,7 @@ export default function OwnerDashboard() {
                     className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all">
                     <option value="mcq">Multiple Choice (MCQ)</option>
                     <option value="theory">Theory / Open-ended</option>
+                    <option value="construction">Construction / Compass &amp; Ruler</option>
                   </select>
                 </div>
               </div>
@@ -392,6 +572,11 @@ export default function OwnerDashboard() {
                   <input type="number" min={1} max={10} value={marks} onChange={(e) => setMarks(Number(e.target.value))}
                     className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Working space height (px)</label>
+                  <input type="number" min={120} max={720} step={20} value={workingSpace} onChange={(e) => setWorkingSpace(Number(e.target.value))}
+                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                </div>
               </div>
 
               <Button icon={<Plus size={16} />} loading={addingQ} onClick={handleAddQuestion}>
@@ -403,61 +588,114 @@ export default function OwnerDashboard() {
 
         {/* ── Payments ── */}
         {tab === "payments" && (
-          <Card padding="none">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-bold text-slate-900 flex items-center gap-2">
-                <CreditCard size={18} className="text-slate-400" /> Registrations & Payments
-              </h2>
-              <Badge variant="default">{students.length} total</Badge>
-            </div>
-
-            {students.length === 0 ? (
-              <div className="text-center py-14 text-slate-400">
-                <CreditCard size={36} className="mx-auto mb-3 opacity-30" />
-                <p>No registrations yet</p>
+          <div className="space-y-6">
+            {/* Pending M-PESA proofs */}
+            <Card padding="none">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 className="font-bold text-slate-900 flex items-center gap-2">
+                  <CreditCard size={18} className="text-amber-500" /> Pending M-PESA Proofs
+                </h2>
+                <Badge variant="warning">{pendingPays.length} pending</Badge>
               </div>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                {students.map((s: any) => (
-                  <div key={s.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50">
-                    <div>
-                      <p className="font-semibold text-slate-900">{s.full_name || s.name}</p>
-                      <p className="text-sm text-slate-500">{s.school} · {s.grade}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {s.paid ? (
-                        <Badge variant="success" dot>Paid</Badge>
-                      ) : (
-                        <>
-                          <Badge variant="warning">Unpaid</Badge>
+              {pendingPays.length === 0 ? (
+                <div className="text-center py-10 text-slate-400">No pending M-PESA proofs</div>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {pendingPays.map((p) => (
+                    <div key={p.id} className="px-6 py-4 hover:bg-slate-50">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-slate-900">{p.full_name}</p>
+                          <p className="text-sm text-slate-500">{p.school}</p>
+                          {p.mpesa_code && (
+                            <p className="text-xs font-mono text-emerald-600 mt-1">Code: {p.mpesa_code}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2 shrink-0">
                           <Button size="sm" icon={<CheckCircle2 size={13} />}
                             className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
-                            onClick={() => markPaid(s.id)}>
-                            Mark Paid
-                          </Button>
-                        </>
+                            onClick={() => reviewPayment(p.id, "paid")}>Approve</Button>
+                          <Button size="sm" variant="danger" icon={<XCircle size={13} />}
+                            onClick={() => reviewPayment(p.id, "rejected")}>Reject</Button>
+                        </div>
+                      </div>
+                      {p.proof_text && (
+                        <p className="text-xs text-slate-500 mt-2 bg-slate-50 rounded-lg p-2.5 whitespace-pre-wrap">{p.proof_text}</p>
                       )}
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Registrations */}
+            <Card padding="none">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 className="font-bold text-slate-900 flex items-center gap-2">
+                  <Users size={18} className="text-slate-400" /> Registrations
+                </h2>
+                <Badge variant="default">{students.length} total</Badge>
               </div>
-            )}
-          </Card>
+              {students.length === 0 ? (
+                <div className="text-center py-14 text-slate-400">
+                  <CreditCard size={36} className="mx-auto mb-3 opacity-30" />
+                  <p>No registrations yet</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {students.map((s) => (
+                    <div key={s.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50">
+                      <div>
+                        <p className="font-semibold text-slate-900">{s.full_name || s.name}</p>
+                        <p className="text-sm text-slate-500">{s.school} · {s.grade}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {s.paid ? (
+                          <Badge variant="success" dot>Paid</Badge>
+                        ) : (
+                          <>
+                            <Badge variant="warning">Unpaid</Badge>
+                            <Button size="sm" icon={<CheckCircle2 size={13} />}
+                              className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
+                              onClick={() => markPaid(s.id)}>Mark Paid</Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
         )}
 
         {/* ── Results ── */}
         {tab === "results" && <ResultsManagement />}
+
         {/* ── Certificates ── */}
         {tab === "certificates" && <CertificateManager />}
+
+        {/* ── Test Contests ── */}
+        {tab === "test" && <TestContests />}
+
+        {/* ── Instructions ── */}
+        {tab === "instructions" && <InstructionsManager />}
+
+        {/* ── Study Materials ── */}
+        {tab === "materials" && <MaterialsManager />}
+
+        {/* ── Assistant ── */}
+        {tab === "assistant" && <AssistantManager />}
+
+        {/* ── Admins ── */}
+        {tab === "admins" && <AdminManagement />}
+
+        {/* ── Support ── */}
+        {tab === "support" && <SupportManager />}
+
+        {/* ── Marking ── */}
+        {tab === "marking" && <Marking />}
       </div>
     </main>
   );
 }
-function apiUrl(path: string): string {
-  // If path is already a full URL, return as is
-  if (/^https?:\/\//.test(path)) return path;
-  // Otherwise, prefix with backend API base (adjust as needed)
-  const base = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
-  return path.startsWith("/") ? base + path : `${base}/${path}`;
-}
-

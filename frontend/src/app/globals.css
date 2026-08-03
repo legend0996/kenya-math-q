@@ -10,6 +10,8 @@
   --border: #e2e8f0;
   --muted: #64748b;
   --radius: 12px;
+  --font-geist-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-geist-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
 }
 
 @theme inline {

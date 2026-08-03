@@ -6,17 +6,44 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
-      - key: DATABASE_URL
+      - key: DB_HOST
         sync: false
-      - key: DIRECT_DATABASE_URL
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_USER
         sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        value: "false"
       - key: PORT
-        value: 5000
+        value: "5000"
       - key: JWT_SECRET
         sync: false
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS
         sync: false
+      # Comma-separated allowed frontend origins (CORS + cookies) — set in dashboard
+      - key: FRONTEND_ORIGINS
+        sync: false
+      # Public URL of this backend, used for M-Pesa callbacks — set in dashboard
+      - key: PUBLIC_URL
+        sync: false
+      # M-Pesa Daraja (leave blank to use manual proof submission)
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_SHORTCODE
+        sync: false
+      - key: MPESA_ENV
+        value: "sandbox"
+      - key: MPESA_AMOUNT
+        value: "100"
     autoDeploy: true
     rootDir: backend

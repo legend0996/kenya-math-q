@@ -1,10 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Menu, X, LayoutDashboard, LogIn, UserPlus, User } from "lucide-react";
 import Image from "next/image";
 
 type User = { role?: string; name?: string };
+
+const readTokenUser = (): User | null => {
+  if (typeof window === "undefined") return null;
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  try {
+    return JSON.parse(atob(token.split(".")[1])) as User;
+  } catch {
+    return null;
+  }
+};
 
 const NAV_LINKS = [
   { href: "/#home",    label: "Home" },
@@ -14,21 +26,11 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => readTokenUser());
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        setUser(payload);
-      } catch {
-        setUser(null);
-      }
-    }
-
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -36,7 +38,10 @@ export default function Navbar() {
 
   const handleProfile = () => {
     if (!user) { window.location.href = "/login"; return; }
-    window.location.href = user.role === "school" ? "/school-dashboard" : "/dashboard";
+    window.location.href =
+      user.role === "school" ? "/school-dashboard"
+      : user.role === "owner" || user.role === "admin" ? "/owner-dashboard"
+      : "/dashboard";
   };
 
   const handleLogout = () => {
@@ -56,7 +61,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
 
         {/* ── Logo ── */}
-        <a href="/" className="flex items-center gap-2.5 group">
+        <Link href="/" className="flex items-center gap-2.5 group">
           <Image
             src="/logo.jpeg"
             alt="Kenya Math Quest"
@@ -67,7 +72,7 @@ export default function Navbar() {
           <span className="font-bold text-slate-900 text-lg hidden sm:block tracking-tight">
             Kenya<span className="text-blue-600">Math</span>Quest
           </span>
-        </a>
+        </Link>
 
         {/* ── Desktop Links ── */}
         <div className="hidden md:flex items-center gap-1">
@@ -103,6 +108,12 @@ export default function Navbar() {
             </>
           ) : (
             <div className="flex items-center gap-2">
+              <a href="/support" className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-all">
+                Support
+              </a>
+              <a href="/settings" className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-all">
+                Settings
+              </a>
               <button
                 onClick={handleProfile}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-all"
@@ -163,6 +174,14 @@ export default function Navbar() {
               </>
             ) : (
               <>
+                <a href="/support" onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg">
+                  Support
+                </a>
+                <a href="/settings" onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg">
+                  Settings
+                </a>
                 <button onClick={() => { handleProfile(); setMenuOpen(false); }}
                   className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg">
                   <LayoutDashboard size={15} /> Dashboard

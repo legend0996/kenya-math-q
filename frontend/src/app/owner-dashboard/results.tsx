@@ -4,27 +4,24 @@ import { useEffect, useState } from "react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
-import { apiUrl } from "../../utils/api";
-import { Spinner, PageSpinner } from "../../components/ui/Spinner";
+import { apiUrl, authHeaders, downloadAuthorized } from "../../utils/api";
+import { PageSpinner } from "../../components/ui/Spinner";
+import { Download } from "lucide-react";
+
+type ContestRow = { id: number; name: string; year: number; results_status?: string };
 
 export default function ResultsManagement() {
-  const [contests, setContests] = useState<any[]>([]);
+  const [contests, setContests] = useState<ContestRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<ContestRow | null>(null);
   const [releasing, setReleasing] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: "success"|"error"; msg: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const getToken = () => localStorage.getItem("token") || "";
-  const authHeader = () => ({
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${getToken()}`,
-  });
-
   useEffect(() => {
-    fetch(apiUrl("/api/owner/contest/all"), { headers: authHeader() })
-      .then(r => r.json())
-      .then(d => { if (d.success) setContests(d.contests || []); })
+    fetch(apiUrl("/api/owner/contest/all"), { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setContests(d.contests || []); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -32,11 +29,11 @@ export default function ResultsManagement() {
     setReleasing(true);
     try {
       const r = await fetch(apiUrl(`/api/owner/contest/${contestId}/release-results`), {
-        method: "POST", headers: authHeader(),
+        method: "POST", headers: authHeaders(),
       });
       const d = await r.json();
       if (d.success) {
-        setContests(cs => cs.map(c => c.id === contestId ? { ...c, results_status: "released" } : c));
+        setContests((cs) => cs.map((c) => c.id === contestId ? { ...c, results_status: "released" } : c));
         setFeedback({ type: "success", msg: "Results released successfully." });
       } else {
         setFeedback({ type: "error", msg: d.message || "Failed to release results." });
@@ -69,7 +66,7 @@ export default function ResultsManagement() {
               <div className="text-center py-10 text-slate-400">No contests found.</div>
             ) : (
               <div className="divide-y divide-slate-50">
-                {contests.map((c: any) => (
+                {contests.map((c) => (
                   <div key={c.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold text-slate-900">{c.name}</p>
@@ -79,6 +76,12 @@ export default function ResultsManagement() {
                       <Badge variant={c.results_status === "released" ? "success" : "warning"}>
                         {c.results_status === "released" ? "Released" : "Pending"}
                       </Badge>
+                      <Button size="sm" variant="outline" icon={<Download size={14} />}
+                        onClick={() => downloadAuthorized(`/api/owner/contest/${c.id}/export`).catch(() => {
+                          setFeedback({ type: "error", msg: "Export failed. Check your session." });
+                        })}>
+                        Export CSV
+                      </Button>
                       {c.results_status !== "released" && (
                         <Button size="sm" onClick={() => { setSelected(c); setShowConfirm(true); }}>
                           Release Results

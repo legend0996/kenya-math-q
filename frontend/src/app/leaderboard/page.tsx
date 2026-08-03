@@ -5,6 +5,7 @@ import { Trophy, Medal, Globe, School, BookOpen, Star } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Card } from "../../components/ui/Card";
 import { PageSpinner } from "../../components/ui/Spinner";
+import { apiUrl, getUser } from "../../utils/api";
 
 type Leader = {
   id: number;
@@ -32,28 +33,25 @@ export default function Leaderboard() {
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [myRank, setMyRank]   = useState<Leader | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const contest_id = 1;
-
-  const getUser = () => {
-    const token = localStorage.getItem("token");
-    if (!token) return null;
-    try { return JSON.parse(atob(token.split(".")[1])); } catch { return null; }
-  };
+  const [contestId, setContestId] = useState<number | null>(null);
 
   useEffect(() => {
-    setLoading(true);
     const user = getUser();
-    let url = apiUrl(`/api/leaderboard?contest_id=${contest_id}`);
-    if (user?.id)     url += `&student_id=${user.id}`;
-    if (type === "school" && user?.school) url += `&type=school&school=${encodeURIComponent(user.school)}`;
-    if (type === "class"  && user?.grade)  url += `&type=class&grade=${encodeURIComponent(user.grade)}`;
-
-    fetch(url)
+    fetch(apiUrl("/api/contest/current"))
       .then((r) => r.json())
-      .then((d) => {
-        setLeaders(d.success ? d.leaderboard || [] : []);
-        setMyRank(d.success ? d.myRank || null : null);
+      .then(async (d) => {
+        const id = d?.success && d?.id ? Number(d.id) : null;
+        setContestId(id);
+        if (!id) return;
+        let url = apiUrl(`/api/leaderboard?contest_id=${id}`);
+        if (user?.id)     url += `&student_id=${user.id}`;
+        if (type === "school" && user?.school) url += `&type=school&school=${encodeURIComponent(user.school)}`;
+        if (type === "class"  && user?.grade)  url += `&type=class&grade=${encodeURIComponent(user.grade)}`;
+
+        const r = await fetch(url);
+        const ld = await r.json();
+        setLeaders(ld.success ? ld.leaderboard || [] : []);
+        setMyRank(ld.success ? ld.myRank || null : null);
       })
       .catch(() => { setLeaders([]); setMyRank(null); })
       .finally(() => setLoading(false));
@@ -187,8 +185,12 @@ export default function Leaderboard() {
             ) : (
               <Card className="text-center py-14">
                 <Medal size={40} className="text-slate-200 mx-auto mb-3" />
-                <p className="text-slate-500 font-medium">No leaderboard data available</p>
-                <p className="text-sm text-slate-400 mt-1">Results will appear after the contest ends</p>
+                <p className="text-slate-500 font-medium">
+                  {contestId === null ? "No active contest" : "No leaderboard data available"}
+                </p>
+                <p className="text-sm text-slate-400 mt-1">
+                  {contestId === null ? "Results will appear once a contest is activated" : "Results will appear after the contest ends"}
+                </p>
               </Card>
             )}
           </>
@@ -196,13 +198,5 @@ export default function Leaderboard() {
       </div>
     </main>
   );
-}
-function apiUrl(path: string) {
-  // Prefix with NEXT_PUBLIC_API_URL if set, else use relative path
-  const base = process.env.NEXT_PUBLIC_API_URL || "";
-  if (path.startsWith("/")) {
-    return base + path;
-  }
-  return base + "/" + path;
 }
 

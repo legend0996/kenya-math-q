@@ -3,10 +3,11 @@
 import Counter from "../components/Counter";
 import Countdown from "../components/Countdown";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   ArrowRight, CheckCircle2, BookOpen, Award,
-  Users, School, MapPin, Clock, Mail, MessageSquare, Send,
+  Users, School, MapPin, Clock, Send,
   ChevronRight,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
@@ -20,8 +21,10 @@ const HOW_IT_WORKS = [
   { icon: <Award size={24} />,        step: "05", title: "Get Certificate",     desc: "Download your participation or merit certificate instantly." },
 ];
 
+type ContestInfo = { id?: number; name?: string; status: string; start_time?: string } | null;
+
 export default function Home() {
-  const [contest, setContest] = useState<any>(null);
+  const [contest, setContest] = useState<ContestInfo>(null);
   const [contact, setContact] = useState({ name: "", email: "", message: "" });
 
   useEffect(() => {
@@ -83,12 +86,12 @@ export default function Home() {
             >
               Get Started <ArrowRight size={18} />
             </a>
-            <a
+            <Link
               href="/#contest"
               className="inline-flex items-center gap-2 px-6 py-3.5 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all"
             >
               View Contest <ChevronRight size={18} />
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -175,7 +178,7 @@ export default function Home() {
               <Clock size={40} className="text-blue-600 mx-auto mb-5" />
               <p className="text-slate-500 mb-3 font-medium">Contest starts in</p>
               <p className="text-5xl font-extrabold text-blue-700 mb-6">
-                <Countdown targetDate={contest.start_time} />
+                <Countdown targetDate={contest.start_time!} />
               </p>
               <a href="/register">
                 <Button size="lg">Register Now <ArrowRight size={18} /></Button>

@@ -1,21 +1,29 @@
 import express from "express";
 import {
-  submitPayment,
+  submitPaymentProof,
+  initiateStkPush,
+  handleStkCallback,
   verifyPayment,
   getAllPayments,
+  getPendingPayments,
+  getPaymentMethods,
 } from "../controllers/paymentController.js";
-
-import { verifyToken, requireAdmin } from "../middleware/authMiddleware.js";
+import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyOwner } from "../middleware/ownerAuth.js";
 
 const router = express.Router();
 
-// Student submits payment
-router.post("/submit", verifyToken, submitPayment);
+// Public — payment methods + M-Pesa STK callback (Safaricom)
+router.get("/methods", getPaymentMethods);
+router.post("/stk/callback", express.json({ type: "*/*" }), handleStkCallback);
 
-// Admin verifies payment
-router.post("/verify", verifyToken, requireAdmin, verifyPayment);
+// Student
+router.post("/submit-proof", verifyToken, submitPaymentProof);
+router.post("/stk", verifyToken, initiateStkPush);
 
-// Admin fetch all payments
-router.get("/", verifyToken, requireAdmin, getAllPayments);
+// Admin
+router.post("/verify", verifyOwner, verifyPayment);
+router.get("/", verifyOwner, getAllPayments);
+router.get("/pending", verifyOwner, getPendingPayments);
 
 export default router;

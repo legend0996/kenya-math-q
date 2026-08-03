@@ -1,25 +1,64 @@
-import pkg from "pg";
+import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const { Pool } = pkg;
-
-// Fix dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 🔥 FORCE load env HERE (not in index.js)
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-const DATABASE_URL = process.env.DATABASE_URL;
-if (!DATABASE_URL) throw new Error("DATABASE_URL is not defined in .env");
-
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-  connectionTimeoutMillis: 30000,
-  idleTimeoutMillis:       30000,
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT || 3306),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: Number(process.env.DB_POOL_MAX || 50),
+  queueLimit: 0,
+  timezone: "Z",
+  dateStrings: false,
+  ssl: process.env.DB_SSL === "true" ? {} : undefined,
+  ...(process.env.DB_SSL_CA
+    ? { ssl: { ca: process.env.DB_SSL_CA } }
+    : {}),
 });
 
-export default pool;
+// Normalize common PostgreSQL-style placeholders and casts for MySQL compatibility.
+function toMysql(sql, params = []) {
+  let substituted = false;
+  const outParams = [];
+  const out = String(sql)
+    .replace(/\$(\d+)/g, (_m, n) => {
+      substituted = true;
+      outParams.push(params[Number(n) - 1]);
+      return "?";
+    })
+    .replace(/::(jsonb|json|text|integer|bigint|numeric|decimal|timestamp|boolean|interval)/g, "")
+    .replace(/\bJSONB\b/g, "JSON")
+    .replace(/\bBOOLEAN\b/g, "TINYINT(1)")
+    .replace(/\bNULLS LAST\b/g, "")
+    .replace(/\bNULLS FIRST\b/g, "")
+    .replace(/\bILIKE\b/g, "LIKE");
+  // If no $N placeholders were present, pass the original params through
+  // so queries that already use MySQL's `?` still get their values bound.
+  return { sql: out, params: substituted ? outParams : params };
+}
+
+const db = {
+  async query(sql, params = []) {
+    const { sql: q, params: p } = toMysql(sql, params);
+    const [result] = await pool.query(q, p);
+    if (Array.isArray(result)) {
+      return { rows: result, rowCount: result.length };
+    }
+    return { rows: [], rowCount: result.affectedRows, insertId: result.insertId, result };
+  },
+  async getConnection() {
+    return pool.getConnection();
+  },
+  pool,
+};
+
+export default db;

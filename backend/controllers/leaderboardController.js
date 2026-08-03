@@ -18,20 +18,20 @@ export const getLeaderboard = async (req, res) => {
         results.score
       FROM results
       JOIN students ON results.student_id = students.id
-      WHERE results.contest_id = $1
+      WHERE results.contest_id = ?
     `;
 
     const values = [contest_id];
 
     // 🏫 SCHOOL FILTER
     if (type === "school" && school) {
-      query += ` AND students.school = $${values.length + 1}`;
+      query += ` AND students.school = ?`;
       values.push(school);
     }
 
     // 🎓 CLASS FILTER
     if (type === "class" && grade) {
-      query += ` AND students.grade = $${values.length + 1}`;
+      query += ` AND students.grade = ?`;
       values.push(grade);
     }
 

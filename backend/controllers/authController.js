@@ -1,194 +1,362 @@
 import pool from "../config/db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { issueAuthCookie, clearAuthCookie } from "../utils/auth.js";
+import { sendPasswordResetEmail } from "../utils/emailService.js";
+
+const TABLES = {
+  student: "students",
+  school: "schools",
+  owner: "owners",
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validAuth = (pw) => typeof pw === "string" && pw.length >= 8;
+const validEmail = (e) => typeof e === "string" && EMAIL_RE.test(e);
+const tableHas = (role) => Boolean(TABLES[role]);
+
+// Find an account by email OR username across students / schools / owners.
+// Returns { role, id, email, username, name } or null.
+export const lookupByIdentifier = async (identifier) => {
+  const id = String(identifier || "").trim().toLowerCase();
+  if (!id) return null;
+
+  for (const role of ["student", "school", "owner"]) {
+    const table = TABLES[role];
+    const nameCol = role === "student" ? "full_name" : "name";
+    const res = await pool.query(
+      `SELECT id, email, username, ${nameCol} AS name FROM ${table} WHERE LOWER(email)=? OR LOWER(username)=? LIMIT 1`,
+      [id, id],
+    );
+    if (res.rows.length > 0) {
+      const r = res.rows[0];
+      return { role, id: r.id, email: r.email, name: r.name, username: r.username };
+    }
+  }
+  return null;
+};
+
+// 🔎 STEP 1 of two-step login — does this email/username exist?
+export const checkIdentifier = async (req, res) => {
+  try {
+    const { identifier } = req.body;
+    const acct = await lookupByIdentifier(identifier);
+    if (!acct) {
+      return res.json({ success: true, exists: false, message: "Account not found" });
+    }
+    return res.json({
+      success: true,
+      exists: true,
+      role: acct.role,
+      name: acct.name,
+      email_masked: acct.email
+        ? acct.email.replace(/^(.)(.*)@/, (m, a, b) => `${a}${"*".repeat(b.length)}@`)
+        : "",
+    });
+  } catch (error) {
+    console.error("CHECK IDENTIFIER ERROR:", error);
+    res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+};
+
+// 🚪 LOGOUT — clears the httpOnly session cookie
+export const logout = (req, res) => {
+  clearAuthCookie(res);
+  res.json({ success: true, message: "Logged out" });
+};
 
 // 👨‍🎓 STUDENT REGISTER
 export const registerStudent = async (req, res) => {
   try {
-    const { full_name, email, password, school, grade } = req.body;
+    const { full_name, email, username, password, school, grade } = req.body;
 
     if (!full_name || !email || !password || !school || !grade) {
-      return res.status(400).json({
-        error: "All fields are required",
-      });
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    if (!validEmail(email)) {
+      return res.status(400).json({ error: "Enter a valid email address" });
+    }
+    if (!validAuth(password)) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
     }
 
-    // 🔍 CHECK IF EXISTS
-    const exists = await pool.query("SELECT * FROM students WHERE email=$1", [
-      email,
-    ]);
+    const uname = username ? String(username).trim() : null;
 
+    const exists = await pool.query(
+      "SELECT * FROM students WHERE email=? OR (username IS NOT NULL AND username=?)",
+      [email, uname],
+    );
     if (exists.rows.length > 0) {
-      return res.status(400).json({
-        error: "Email already registered",
-      });
+      return res.status(400).json({ error: "Email or username already registered" });
     }
 
     const hashed = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
-      `INSERT INTO students (full_name, email, password, school, grade)
-       VALUES ($1,$2,$3,$4,$5)
-       RETURNING id, full_name, email, school, grade`,
-      [full_name, email, hashed, school, grade],
+      `INSERT INTO students (full_name, email, username, password, school, grade)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [full_name, email, uname, hashed, school, grade],
     );
 
     res.json({
       success: true,
       message: "Student registered successfully",
-      user: result.rows[0],
+      user: { id: result.insertId, full_name, email, username: uname, school, grade },
     });
   } catch (error) {
     console.error("REGISTER STUDENT ERROR:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Registration failed. Please try again." });
   }
 };
 
 // 🏫 SCHOOL REGISTER (PENDING APPROVAL)
 export const registerSchool = async (req, res) => {
   try {
-    const { name, email, password, county } = req.body;
+    const { name, email, username, password, county } = req.body;
 
     if (!name || !email || !password || !county) {
-      return res.status(400).json({
-        error: "All fields are required",
-      });
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    if (!validEmail(email)) {
+      return res.status(400).json({ error: "Enter a valid email address" });
+    }
+    if (!validAuth(password)) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
     }
 
-    // 🔍 CHECK IF EXISTS
-    const exists = await pool.query("SELECT * FROM schools WHERE email=$1", [
-      email,
-    ]);
-
+    const uname = username ? String(username).trim() : null;
+    const exists = await pool.query(
+      "SELECT * FROM schools WHERE email=? OR username IS NOT NULL AND username=?",
+      [email, uname],
+    );
     if (exists.rows.length > 0) {
-      return res.status(400).json({
-        error: "School email already registered",
-      });
+      return res.status(400).json({ error: "School email or username already registered" });
     }
 
     const hashed = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
-      `INSERT INTO schools (name, email, password, county, status)
-       VALUES ($1,$2,$3,$4,'pending')
-       RETURNING id, name, status`,
-      [name, email, hashed, county],
+      `INSERT INTO schools (name, email, username, password, county, status)
+       VALUES (?, ?, ?, ?, ?, 'pending')`,
+      [name, email, uname, hashed, county],
     );
 
     res.json({
       success: true,
       message: "School registered. Await admin approval.",
-      school: result.rows[0],
+      school: { id: result.insertId, name, status: "pending" },
     });
   } catch (error) {
     console.error("REGISTER SCHOOL ERROR:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Registration failed. Please try again." });
   }
 };
 
-// 👨‍🎓 STUDENT LOGIN
+const signToken = (payload, res) => {
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
+  issueAuthCookie(res, token);
+  return token;
+};
+
+// 👨‍🎓 STUDENT LOGIN (email OR username)
 export const loginStudent = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const identifier = req.body.identifier || req.body.email;
+    const { password } = req.body;
 
-    const user = await pool.query("SELECT * FROM students WHERE email=$1", [
-      email,
-    ]);
-
-    if (user.rows.length === 0) {
-      return res.status(404).json({
-        error: "User not found",
-      });
+    const acct = await lookupByIdentifier(identifier);
+    if (!acct || acct.role !== "student") {
+      return res.status(401).json({ error: "Invalid credentials" });
     }
+
+    const user = await pool.query("SELECT * FROM students WHERE id=?", [acct.id]);
+    if (user.rows.length === 0) return res.status(401).json({ error: "Invalid credentials" });
+
+    const valid = await bcrypt.compare(password, user.rows[0].password);
+    if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
     const student = user.rows[0];
-
-    const valid = await bcrypt.compare(password, student.password);
-
-    if (!valid) {
-      return res.status(401).json({
-        error: "Invalid credentials",
-      });
-    }
-
-    const token = jwt.sign(
-      {
-        id: student.id,
-        role: "student",
-        school: student.school, // 🔥 IMPORTANT
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
+    // Promoted student admins land on the admin dashboard when they log in
+    const role = student.is_admin ? "owner" : "student";
+    const token = signToken({ id: student.id, role, school: student.school }, res);
 
     res.json({
       success: true,
       token,
+      admin: !!student.is_admin,
       user: {
         id: student.id,
         name: student.full_name,
         email: student.email,
+        username: student.username,
         school: student.school,
+        role,
       },
     });
   } catch (error) {
     console.error("LOGIN STUDENT ERROR:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Login failed. Please try again." });
   }
 };
 
-// 🏫 SCHOOL LOGIN (CHECK APPROVAL)
+// 🏫 SCHOOL LOGIN (email OR username) — checks approval
 export const loginSchool = async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    const user = await pool.query("SELECT * FROM schools WHERE email=$1", [
-      email,
-    ]);
-
-    if (user.rows.length === 0) {
-      return res.status(404).json({
-        error: "School not found",
-      });
+    const identifier = req.body.identifier || req.body.email;
+    const { password } = req.body;
+    const acct = await lookupByIdentifier(identifier);
+    if (!acct || acct.role !== "school") {
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    const user = await pool.query("SELECT * FROM schools WHERE id=?", [acct.id]);
+    if (user.rows.length === 0) return res.status(401).json({ error: "Invalid credentials" });
     const school = user.rows[0];
 
     if (school.status !== "approved") {
-      return res.status(403).json({
-        error: "School not approved yet",
-      });
+      return res.status(403).json({ error: "School not approved yet" });
     }
 
     const valid = await bcrypt.compare(password, school.password);
+    if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
-    if (!valid) {
-      return res.status(401).json({
-        error: "Invalid credentials",
-      });
-    }
-
-    const token = jwt.sign(
-      {
-        id: school.id,
-        role: "school",
-        school: school.name, // 🔥 IMPORTANT
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
+    const token = signToken({ id: school.id, role: "school", school: school.name }, res);
 
     res.json({
       success: true,
       token,
-      school: {
-        id: school.id,
-        name: school.name,
-        county: school.county,
-      },
+      school: { id: school.id, name: school.name, email: school.email, username: school.username, county: school.county },
     });
   } catch (error) {
     console.error("LOGIN SCHOOL ERROR:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Login failed. Please try again." });
+  }
+};
+
+const verifyCurrentPassword = async (role, id, current) => {
+  const table = TABLES[role];
+  if (!table) return false;
+  const r = await pool.query(`SELECT password FROM ${table} WHERE id=?`, [id]);
+  if (r.rows.length === 0) return false;
+  return bcrypt.compare(current, r.rows[0].password);
+};
+
+// 🔐 CHANGE PASSWORD (logged-in student/school) — requires current password
+export const changePassword = async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    const { role, id } = req.user || req.owner || {};
+
+    if (!tableHas(role)) return res.status(403).json({ error: "Not allowed" });
+    if (!validAuth(new_password)) {
+      return res.status(400).json({ error: "New password must be at least 8 characters" });
+    }
+    if (!(await verifyCurrentPassword(role, id, current_password || ""))) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    const hashed = await bcrypt.hash(new_password, 10);
+    await pool.query(`UPDATE ${TABLES[role]} SET password=? WHERE id=?`, [hashed, id]);
+
+    res.json({ success: true, message: "Password updated" });
+  } catch (error) {
+    console.error("CHANGE PASSWORD ERROR:", error);
+    res.status(500).json({ error: "Could not update password. Please try again." });
+  }
+};
+
+// ✉️ CHANGE EMAIL (logged-in user/school) — requires current password
+export const changeEmail = async (req, res) => {
+  try {
+    const { current_password, new_email } = req.body;
+    const { role, id } = req.user || req.owner || {};
+    if (!tableHas(role)) return res.status(403).json({ error: "Not allowed" });
+    if (!validEmail(new_email || "")) return res.status(400).json({ error: "Enter a valid email" });
+    if (!(await verifyCurrentPassword(role, id, current_password || ""))) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    const clash = await pool.query(
+      `SELECT id FROM ${TABLES[role]} WHERE email=? AND id<>? LIMIT 1`,
+      [new_email, id],
+    );
+    if (clash.rows.length > 0) return res.status(400).json({ error: "Email already in use" });
+
+    await pool.query(`UPDATE ${TABLES[role]} SET email=? WHERE id=?`, [new_email, id]);
+    res.json({ success: true, message: "Email updated" });
+  } catch (error) {
+    console.error("CHANGE EMAIL ERROR:", error);
+    res.status(500).json({ error: "Could not update email. Please try again." });
+  }
+};
+
+const makeCode = () => crypto.randomInt(100000, 999999).toString();
+
+// 🔑 REQUEST PASSWORD RESET — emails a 15-minute code
+export const requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const acct = await lookupByIdentifier(email);
+    if (!acct || acct.role === "owner") {
+      // No existing account (or owner); still return success to avoid enumeration
+      return res.json({ success: true, exists: false, message: "If that account exists, a reset code was sent." });
+    }
+
+    const code = makeCode();
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+    await pool.query("DELETE FROM password_resets WHERE email=?", [acct.email]);
+    await pool.query(
+      "INSERT INTO password_resets (email, code, expires_at) VALUES (?,?,?)",
+      [acct.email, code, expires],
+    );
+
+    try {
+      await sendPasswordResetEmail(acct.email, code, acct.name, acct.role);
+    } catch (e) {
+      console.error("RESET EMAIL ERROR:", e.message);
+      return res.json({ success: true, exists: true, message: "Reset code generated (email not configured).", dev_code: code });
+    }
+
+    res.json({ success: true, exists: true, message: "A reset code was sent to your email." });
+  } catch (error) {
+    console.error("REQUEST RESET ERROR:", error);
+    res.status(500).json({ error: "Could not start password reset." });
+  }
+};
+
+// 🔓 RESET PASSWORD with the emailed code (valid 15 minutes)
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, code, new_password } = req.body;
+    if (!validAuth(new_password)) {
+      return res.status(400).json({ error: "New password must be at least 8 characters" });
+    }
+
+    const row = (
+      await pool.query(
+        "SELECT * FROM password_resets WHERE email=? AND code=? AND used=0 LIMIT 1",
+        [email, String(code || "").trim()],
+      )
+    ).rows[0];
+    if (!row) {
+      return res.status(400).json({ error: "Invalid or expired reset code" });
+    }
+    if (new Date(row.expires_at).getTime() < Date.now()) {
+      return res.status(400).json({ error: "This code has expired. Request a new one." });
+    }
+
+    const acct = await lookupByIdentifier(email);
+    if (!acct) return res.status(400).json({ error: "Account not found" });
+
+    const hashed = await bcrypt.hash(new_password, 10);
+    await pool.query(`UPDATE ${TABLES[acct.role]} SET password=? WHERE id=?`, [hashed, acct.id]);
+    await pool.query("UPDATE password_resets SET used=1 WHERE id=?", [row.id]);
+
+    res.json({ success: true, message: "Password updated. You can now log in." });
+  } catch (error) {
+    console.error("RESET PASSWORD ERROR:", error);
+    res.status(500).json({ error: "Could not reset password. Please try again." });
   }
 };

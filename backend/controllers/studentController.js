@@ -22,26 +22,32 @@ export const registerStudent = async (req, res) => {
     const studentResult = await pool.query(
       `INSERT INTO students 
       (full_name, parent_phone, student_phone, school_id, grade, county)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *`,
+      VALUES (?, ?, ?, ?, ?, ?)`,
       [full_name, parent_phone, student_phone, school_id, grade, county],
     );
 
-    const student = studentResult.rows[0];
+    const student = {
+      id: studentResult.insertId,
+      full_name,
+      parent_phone,
+      student_phone,
+      school_id,
+      grade,
+      county,
+    };
 
     // 3. Create registration
     const registrationResult = await pool.query(
       `INSERT INTO registrations 
       (student_id, contest_id, payment_status)
-      VALUES ($1, $2, 'pending')
-      RETURNING *`,
+      VALUES (?, ?, 'pending')`,
       [student.id, contest.id],
     );
 
     res.status(201).json({
       message: "Registration successful",
       student,
-      registration: registrationResult.rows[0],
+      registration: { id: registrationResult.insertId, student_id: student.id, contest_id: contest.id, payment_status: "pending" },
     });
   } catch (error) {
     console.error(error);

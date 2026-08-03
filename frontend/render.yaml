@@ -8,5 +8,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20
+      # Public URL of the deployed backend — set this in the Render dashboard
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
     autoDeploy: true
     rootDir: frontend

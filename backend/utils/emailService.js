@@ -1,18 +1,48 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const host = process.env.SMTP_HOST;
+const port = Number(process.env.SMTP_PORT || 587);
+const secure = process.env.SMTP_SECURE === "true";
+const user = process.env.EMAIL_USER;
+const pass = process.env.EMAIL_PASS;
+const from = process.env.EMAIL_FROM || user;
+const name = process.env.EMAIL_NAME || "Kenya Math Quest";
+
+// Email is fully configured via environment variables; skips sending otherwise.
+const configured = Boolean(host && user && pass);
+
+const transporter = configured
+  ? nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+      ...(secure ? {} : { requireTLS: true }),
+    })
+  : null;
 
 export const sendCertificateEmail = async (to, password) => {
+  if (!transporter) {
+    console.warn("⚠ Email not configured (SMTP_HOST/EMAIL_USER/EMAIL_PASS missing) — skipping certificate email");
+    return;
+  }
   await transporter.sendMail({
-    from: process.env.EMAIL_USER,
+    from: `"${name}" <${from}>`,
     to,
     subject: "Kenya Math Quest Certificate",
-    text: `Your certificate password is: ${password}`,
+    text: `Dear student,\n\nYour certificate is ready. Use this password to download it:\n\n  ${password}\n\nThank you,\n${name}`,
+  });
+};
+
+export const sendPasswordResetEmail = async (to, code, recipientName, role) => {
+  if (!transporter) {
+    console.warn(`⚠ Email not configured — password reset code for ${to} is: ${code}`);
+    return;
+  }
+  await transporter.sendMail({
+    from: `"${name}" <${from}>`,
+    to,
+    subject: "Kenya Math Quest — Password Reset Code",
+    text: `Dear ${recipientName || "User"},\n\nYou requested to reset your ${role === "school" ? "school" : ""} account password.\n\nYour reset code is:\n\n  ${code}\n\nIt expires in 15 minutes. If you did not request this, ignore this email.\n\nThank you,\n${name}`,
   });
 };
