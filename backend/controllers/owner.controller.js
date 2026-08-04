@@ -351,6 +351,94 @@ export const saveContestPapers = async (req, res) => {
   }
 };
 
+// 📋 GET ALL QUESTIONS FOR A CONTEST (grouped for the admin editor)
+export const getQuestionsByContest = async (req, res) => {
+  try {
+    const { contest_id } = req.params;
+    const rows = (
+      await pool.query(
+        `SELECT q.id, q.contest_id, q.grade, q.question, q.option_a, q.option_b,
+                q.option_c, q.option_d, q.correct_answer, q.marks, q.type, q.working_space,
+                q.created_at
+         FROM questions q
+         WHERE q.contest_id=?
+         ORDER BY q.grade, q.id`,
+        [contest_id],
+      )
+    ).rows;
+    res.json({ success: true, questions: rows });
+  } catch (error) {
+    console.error("GET QUESTIONS ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ✏️ EDIT A QUESTION (including marks)
+export const updateQuestion = async (req, res) => {
+  try {
+    const { question_id } = req.params;
+    const {
+      question,
+      option_a,
+      option_b,
+      option_c,
+      option_d,
+      correct_answer,
+      marks,
+      grade,
+      working_space,
+    } = req.body;
+
+    const existing = (await pool.query("SELECT * FROM questions WHERE id=?", [question_id])).rows[0];
+    if (!existing) return res.status(404).json({ error: "Question not found" });
+
+    await pool.query(
+      `UPDATE questions SET
+         grade=?, question=?, option_a=?, option_b=?, option_c=?, option_d=?,
+         correct_answer=?, marks=?, working_space=?
+       WHERE id=?`,
+      [
+        grade || existing.grade,
+        question ?? existing.question,
+        option_a !== undefined ? option_a : existing.option_a,
+        option_b !== undefined ? option_b : existing.option_b,
+        option_c !== undefined ? option_c : existing.option_c,
+        option_d !== undefined ? option_d : existing.option_d,
+        correct_answer ?? existing.correct_answer,
+        marks != null ? Number(marks) : existing.marks,
+        working_space != null ? Number(working_space) : existing.working_space,
+        question_id,
+      ],
+    );
+
+    res.json({ success: true, message: "Question updated" });
+  } catch (error) {
+    console.error("UPDATE QUESTION ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 🗑 DELETE A QUESTION
+export const deleteQuestion = async (req, res) => {
+  try {
+    const { question_id } = req.params;
+    await pool.query(
+      "DELETE FROM answers WHERE question_id=?",
+      [question_id],
+    );
+    await pool.query(
+      "DELETE FROM question_marks WHERE question_id=?",
+      [question_id],
+    );
+    const r = await pool.query("DELETE FROM questions WHERE id=?", [question_id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: "Question not found" });
+    res.json({ success: true, message: "Question deleted" });
+  } catch (error) {
+    console.error("DELETE QUESTION ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // 🏅 RELEASE RESULTS FOR A CONTEST
 export const releaseContestResults = async (req, res) => {
   try {
@@ -547,6 +635,229 @@ export const revokeStudentAdmin = async (req, res) => {
     await pool.query("UPDATE students SET is_admin=0, permissions=NULL WHERE id=?", [student_id]);
     res.json({ success: true, message: "Admin role revoked. They'll use the student dashboard again." });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ── STUDENT DIRECTORY ────────────────────────────────────────
+// Full student table for a chosen contest: registration / payment / exam status.
+export const getAllStudentsDetailed = async (req, res) => {
+  try {
+    const contest_id = Number(req.query.contest_id) || null;
+
+    const sql = `
+      SELECT
+        s.id,
+        s.full_name,
+        s.email,
+        s.student_phone,
+        s.parent_phone,
+        s.school,
+        s.grade,
+        s.county,
+        s.created_at,
+        CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END AS registered,
+        CASE WHEN r.id IS NOT NULL AND r.payment_status='paid' THEN 1 ELSE 0 END AS paid,
+        CASE WHEN res.id IS NOT NULL AND res.completed=1 THEN 1 ELSE 0 END AS done
+      FROM students s
+      LEFT JOIN registrations r ON r.student_id=s.id AND r.contest_id=?
+      LEFT JOIN results res ON res.student_id=s.id AND res.contest_id=?
+      ORDER BY s.grade, s.school, s.full_name
+    `;
+    const rows = (
+      await pool.query(sql, [contest_id, contest_id])
+    ).rows.map((r) => ({
+      ...r,
+      registered: !!r.registered,
+      paid: !!r.paid,
+      done: !!r.done,
+    }));
+
+    res.json({ success: true, students: rows });
+  } catch (error) {
+    console.error("STUDENT TABLE ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ➕ BULK REGISTER STUDENTS FOR A CONTEST (all, or a selected list)
+export const registerStudents = async (req, res) => {
+  try {
+    const { contest_id, student_ids, mark_paid } = req.body;
+
+    if (!contest_id) {
+      return res.status(400).json({ error: "contest_id required" });
+    }
+
+    let ids = [];
+    if (Array.isArray(student_ids) && student_ids.length > 0) {
+      ids = [...new Set(student_ids.map((x) => Number(x)))].filter((x) => Number.isFinite(x));
+    } else {
+      const all = await pool.query("SELECT id FROM students");
+      ids = all.rows.map((r) => r.id);
+    }
+    if (ids.length === 0) {
+      return res.json({ success: true, count: 0, message: "No students to register" });
+    }
+
+    const paidFlag = mark_paid ? "paid" : "pending";
+    const values = ids.map((id) => [id, contest_id, paidFlag]);
+    await pool.query(
+      "INSERT IGNORE INTO registrations (student_id, contest_id, payment_status) VALUES ?",
+      [values],
+    );
+
+    if (mark_paid) {
+      const placeholders = ids.map(() => "?").join(",");
+      await pool.query(
+        `UPDATE registrations SET payment_status='paid'
+         WHERE contest_id=? AND student_id IN (${placeholders})`,
+        [contest_id, ...ids],
+      );
+      await pool.query(
+        `UPDATE students SET paid=1 WHERE id IN (${placeholders})`,
+        ids,
+      );
+      await syncBulkPayments(contest_id, ids);
+    }
+
+    res.json({
+      success: true,
+      count: ids.length,
+      message: `${ids.length} student(s) registered${mark_paid ? " and marked as paid" : ""}`,
+    });
+  } catch (error) {
+    console.error("BULK REGISTER ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 💰 BULK MARK SELECTED REGISTRATIONS AS PAID
+export const markStudentsPaid = async (req, res) => {
+  try {
+    const { contest_id, student_ids } = req.body;
+
+    if (!contest_id || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({ error: "contest_id and student_ids[] required" });
+    }
+
+    const ids = [...new Set(student_ids.map((x) => Number(x)))].filter((x) => Number.isFinite(x));
+    const placeholders = ids.map(() => "?").join(",");
+
+    // Ensure a registration row exists so payment can be linked
+    const values = ids.map((id) => [id, contest_id, "paid"]);
+    await pool.query(
+      "INSERT IGNORE INTO registrations (student_id, contest_id, payment_status) VALUES ?",
+      [values],
+    );
+
+    await pool.query(
+      `UPDATE registrations SET payment_status='paid' WHERE contest_id=? AND student_id IN (${placeholders})`,
+      [contest_id, ...ids],
+    );
+    await pool.query(`UPDATE students SET paid=1 WHERE id IN (${placeholders})`, ids);
+
+    await syncBulkPayments(contest_id, ids);
+
+    res.json({ success: true, count: ids.length, message: `${ids.length} student(s) marked as paid` });
+  } catch (error) {
+    console.error("BULK PAYMENT ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Upsert payments rows for a set of (contest_id, student_ids) so the admin bulk
+// actions mirror the single markPayment flow (update existing / insert missing).
+const syncBulkPayments = async (contest_id, ids) => {
+  const placeholders = ids.map(() => "?").join(",");
+  const regRows = (
+    await pool.query(
+      `SELECT id, student_id FROM registrations WHERE contest_id=? AND student_id IN (${placeholders})`,
+      [contest_id, ...ids],
+    )
+  ).rows;
+
+  const existing = (
+    await pool.query(
+      `SELECT student_id FROM payments WHERE contest_id=? AND student_id IN (${placeholders})`,
+      [contest_id, ...ids],
+    )
+  ).rows.map((r) => r.student_id);
+
+  const inserts = regRows.filter((r) => !existing.includes(r.student_id));
+  const updates = regRows.filter((r) => existing.includes(r.student_id));
+
+  if (inserts.length > 0) {
+    await pool.query(
+      `INSERT INTO payments (student_id, contest_id, registration_id, status, mpesa_message)
+       VALUES ?`,
+      [inserts.map((r) => [r.student_id, contest_id, r.id, "paid", "marked paid by admin (bulk)"])],
+    );
+  }
+  for (const r of updates) {
+    await pool.query(
+      "UPDATE payments SET registration_id=?, status='paid' WHERE student_id=? AND contest_id=?",
+      [r.id, r.student_id, contest_id],
+    );
+  }
+};
+
+// 🗓 SET PER-GRADE CONTEST DAYS (grade_schedule JSON on contests)
+// Map of grade → { start, end } (ISO). Grades not in the map use the global window.
+export const setContestGradeSchedule = async (req, res) => {
+  try {
+    const { contest_id, grade_schedule } = req.body;
+
+    if (!contest_id) {
+      return res.status(400).json({ error: "contest_id required" });
+    }
+
+    const cleaned = {};
+    if (grade_schedule && typeof grade_schedule === "object") {
+      for (const [grade, slot] of Object.entries(grade_schedule)) {
+        if (slot && slot.start) {
+          cleaned[grade] = {
+            start: String(slot.start),
+            end: slot.end ? String(slot.end) : String(slot.start),
+          };
+        }
+      }
+    }
+
+    await pool.query("UPDATE contests SET grade_schedule=? WHERE id=?", [
+      JSON.stringify(cleaned),
+      contest_id,
+    ]);
+
+    res.json({ success: true, message: "Grade contest days saved" });
+  } catch (error) {
+    console.error("GRADE SCHEDULE ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 🔁 RESET A STUDENT'S ATTEMPT SO THEY CAN REPEAT THE EXAM
+// Wipes answers, per-question marks, the draft session and any old result/certificate.
+export const resetStudentResults = async (req, res) => {
+  try {
+    const { contest_id, student_ids } = req.body;
+
+    if (!contest_id || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({ error: "contest_id and student_ids[] required" });
+    }
+
+    const ids = [...new Set(student_ids.map((x) => Number(x)))].filter((x) => Number.isFinite(x));
+    const placeholders = ids.map(() => "?").join(",");
+
+    await pool.query(`DELETE FROM answers WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+    await pool.query(`DELETE FROM question_marks WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+    await pool.query(`DELETE FROM exam_sessions WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+    await pool.query(`DELETE FROM results WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+    await pool.query(`DELETE FROM certificates WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+
+    res.json({ success: true, count: ids.length, message: `${ids.length} student(s) can now retake the exam` });
+  } catch (error) {
+    console.error("RESET RESULT ERROR:", error);
     res.status(500).json({ error: error.message });
   }
 };

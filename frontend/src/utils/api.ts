@@ -30,7 +30,7 @@ export async function downloadAuthorized(path: string, filename?: string) {
   URL.revokeObjectURL(url);
 }
 
-export function getUser(): { id?: number; role?: string; name?: string; school?: string; grade?: string } | null {
+export function getUser(): { id?: number; role?: string; name?: string; school?: string; grade?: string; phone?: string } | null {
   try {
     const token = getToken();
     if (!token) return null;

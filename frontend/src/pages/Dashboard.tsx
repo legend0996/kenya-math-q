@@ -5,6 +5,7 @@ import {
   Trophy, BookOpen, Award, BarChart2, Calendar,
   LogOut, ChevronRight, Download, Play, Clock, CheckCircle,
   UserPlus, CreditCard, Lock, AlertCircle, ExternalLink,
+  Smartphone, Receipt, X,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card, StatCard } from "../components/ui/Card";
@@ -13,7 +14,7 @@ import { PageSpinner } from "../components/ui/Spinner";
 import { apiUrl, authHeaders, getUser } from "../utils/api";
 
 type User = { id?: number; name?: string; school?: string };
-type Contest = { id: number; name: string; status: string; start_time: string; results_released?: boolean };
+type Contest = { id: number; name: string; status: string; start_time: string; results_released?: boolean; is_test?: boolean };
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -30,6 +31,11 @@ export default function Dashboard() {
 
   const [mpesa, setMpesa] = useState({ code: "", proof: "" });
   const [submittingPay, setSubmittingPay] = useState(false);
+  const [regModal, setRegModal] = useState(false);
+  const [payMethod, setPayMethod] = useState<"stk" | "manual" | null>(null);
+  const [stkPhone, setStkPhone] = useState("");
+  const [stkBusy, setStkBusy] = useState(false);
+  const [stkMsg, setStkMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const [materials, setMaterials] = useState<{ id: number; title: string; description?: string; content_type: string; content?: string; created_at: string }[]>([]);
@@ -78,7 +84,8 @@ export default function Dashboard() {
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  const handleRegister = async () => {
+  const doRegister = async () => {
+    if (registered) return true;
     try {
       const res = await fetch(apiUrl("/api/contest/register"), {
         method: "POST", headers: authHeaders(),
@@ -88,33 +95,85 @@ export default function Dashboard() {
       if (d.success) {
         setRegistered(true);
         setPaymentStatus("pending");
-        showFeedback("success", "Registered for the contest!");
-      } else {
-        showFeedback("error", d.error || "Registration failed");
+        return true;
       }
+      showFeedback("error", d.error || "Registration failed");
+      return false;
     } catch {
       showFeedback("error", "Connection error");
+      return false;
     }
   };
 
-  const handleSubmitPayment = async () => {
-    if (!contest || !mpesa.code.trim()) {
-      showFeedback("error", "Enter the M-PESA confirmation code");
+  const handleRegisterDirect = async () => {
+    const ok = await doRegister();
+    if (ok) {
+      showFeedback("success", "Registered for the contest!");
+      load();
+    }
+  };
+
+  const openPayModal = (method: "stk" | "manual") => {
+    setPayMethod(method);
+    setStkMsg(null);
+    setRegModal(true);
+  };
+
+  const handleStk = async () => {
+    if (!contest) return;
+    const phone = stkPhone.replace(/\s/g, "");
+    if (!/^(07\d{8}|2547\d{8})$/.test(phone)) {
+      setStkMsg({ type: "error", text: "Enter a valid Safaricom number, e.g. 0712 345 678" });
+      return;
+    }
+    setStkBusy(true);
+    setStkMsg(null);
+    try {
+      const ok = await doRegister();
+      if (!ok) return;
+      const res = await fetch(apiUrl("/api/payment/stk"), {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ contest_id: contest.id, phone }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        setStkMsg({ type: "success", text: "STK prompt sent! Check your phone and enter your M-PESA PIN to complete payment." });
+        setPaymentStatus("stk_pending");
+        load();
+      } else {
+        setStkMsg({ type: "error", text: d.error || "STK push failed. Try again or use manual payment." });
+      }
+    } catch {
+      setStkMsg({ type: "error", text: "Connection error. Try again or use manual payment." });
+    } finally {
+      setStkBusy(false);
+    }
+  };
+
+  const handleManualSubmit = async () => {
+    if (!contest) return;
+    if (!mpesa.code.trim()) {
+      showFeedback("error", "Paste the M-PESA confirmation message first");
       return;
     }
     setSubmittingPay(true);
     try {
+      const ok = await doRegister();
+      if (!ok) return;
       const res = await fetch(apiUrl("/api/payment/submit-proof"), {
         method: "POST", headers: authHeaders(),
         body: JSON.stringify({ contest_id: contest.id, mpesa_code: mpesa.code.trim(), proof_text: mpesa.proof.trim() }),
       });
       const d = await res.json();
       if (d.success) {
-        showFeedback("success", "Payment proof submitted. Await approval.");
+        setRegModal(false);
+        setPayMethod(null);
         setMpesa({ code: "", proof: "" });
         setPaymentStatus("pending");
+        showFeedback("success", "Payment submitted. It will be reviewed by the administrator.");
+        load();
       } else {
-        showFeedback("error", d.error || "Failed to submit");
+        showFeedback("error", d.error || "Failed to submit payment");
       }
     } catch {
       showFeedback("error", "Connection error");
@@ -205,14 +264,20 @@ export default function Dashboard() {
 
                   {/* Registration / payment / exam buttons */}
                   {!registered ? (
-                    <Button icon={<UserPlus size={16} />} onClick={handleRegister}>
-                      Register for Contest
-                    </Button>
+                    contest.is_test ? (
+                      <Button icon={<UserPlus size={16} />} onClick={handleRegisterDirect}>
+                        Register
+                      </Button>
+                    ) : (
+                      <Button icon={<UserPlus size={16} />} onClick={() => openPayModal("stk")}>
+                        Register &amp; Pay
+                      </Button>
+                    )
                   ) : paid ? (
                     <Badge variant="success" dot>Registered • Paid</Badge>
                   ) : (
                     <Badge variant="warning" dot>
-                      {paymentStatus === "pending" ? "Payment under review" : "Payment required"}
+                      {(paymentStatus === "pending" || paymentStatus === "stk_pending") ? "Payment under review" : "Payment required"}
                     </Badge>
                   )}
                 </div>
@@ -278,38 +343,31 @@ export default function Dashboard() {
                   <h3 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
                     <CreditCard size={18} className="text-emerald-600" /> Pay Entry Fee (M-PESA)
                   </h3>
-                  <p className="text-sm text-slate-500 mb-4">
-                    Pay to <span className="font-bold text-slate-700">Business Number 000000</span> (Paybill) and
-                    paste the confirmation message below, including the M-PESA code.
-                  </p>
 
-                  {paymentStatus === "pending" ? (
+                  {paymentStatus === "pending" || paymentStatus === "stk_pending" ? (
                     <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm px-4 py-3 rounded-xl">
-                      ⏳ Your payment is under review. Once approved you can start the exam.
+                      ⏳ {paymentStatus === "stk_pending"
+                        ? "Your M-PESA payment is being confirmed. Once confirmed you can start the exam."
+                        : "Your payment is under review. Once approved you can start the exam."}
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <input
-                        placeholder="M-PESA code (e.g. SFS5K7X2QZ)"
-                        value={mpesa.code}
-                        onChange={(e) => setMpesa({ ...mpesa, code: e.target.value })}
-                        className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
-                      />
-                      <textarea
-                        rows={3}
-                        placeholder="Paste the full M-PESA confirmation message…"
-                        value={mpesa.proof}
-                        onChange={(e) => setMpesa({ ...mpesa, proof: e.target.value })}
-                        className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all resize-none"
-                      />
-                      <Button
-                        loading={submittingPay}
-                        icon={<ExternalLink size={15} />}
-                        className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
-                        onClick={handleSubmitPayment}
-                      >
-                        Submit Payment Proof
-                      </Button>
+                      <p className="text-sm text-slate-500">
+                        Choose how you&apos;d like to pay the entry fee:
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button icon={<CreditCard size={15} />} onClick={() => openPayModal("stk")}>
+                          Pay via M-PESA (STK) — instant
+                        </Button>
+                        <Button
+                          variant="outline"
+                          icon={<ExternalLink size={15} />}
+                          className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                          onClick={() => openPayModal("manual")}
+                        >
+                          Pay Manually (Till 123456)
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </Card>
@@ -496,6 +554,117 @@ export default function Dashboard() {
           )}
         </section>
       </div>
+
+      {/* Register & Pay modal */}
+      {regModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-bold text-lg text-slate-900">
+                {registered ? "Pay Entry Fee" : "Register & Pay for Contest"}
+              </h3>
+              <button onClick={() => { setRegModal(false); setPayMethod(null); setStkMsg(null); }}
+                className="text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            {!payMethod ? (
+              <div className="space-y-3 pt-2">
+                <p className="text-sm text-slate-500">Choose how you&apos;d like to pay the entry fee:</p>
+                <button
+                  onClick={() => openPayModal("stk")}
+                  className="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-left"
+                >
+                  <Smartphone size={20} className="text-blue-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-slate-900">Pay via M-PESA (STK) — instant</p>
+                    <p className="text-xs text-slate-500">You&apos;ll get an M-PESA prompt on your phone. Enter your PIN to pay instantly.</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => openPayModal("manual")}
+                  className="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
+                >
+                  <Receipt size={20} className="text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-slate-900">Pay Manually (Till)</p>
+                    <p className="text-xs text-slate-500">Send money via Lipa na M-PESA to Till <b>123456</b>, paste the message below, and submit for review.</p>
+                  </div>
+                </button>
+              </div>
+            ) : payMethod === "stk" ? (
+              <div className="space-y-4 pt-2">
+                <label className="block text-sm font-medium text-slate-700">
+                  M-PESA Phone Number (Safaricom)
+                </label>
+                <input
+                  value={stkPhone}
+                  onChange={(e) => setStkPhone(e.target.value)}
+                  placeholder="e.g. 0712 345 678"
+                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                />
+                {stkMsg && (
+                  <div className={`text-sm px-4 py-3 rounded-xl ${
+                    stkMsg.type === "success"
+                      ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                      : "bg-red-50 border border-red-200 text-red-700"
+                  }`}>
+                    {stkMsg.type === "success" ? <CheckCircle size={15} /> : <AlertCircle size={15} />} {stkMsg.text}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button loading={stkBusy} icon={<Smartphone size={15} />} onClick={handleStk}>
+                    Send STK Prompt
+                  </Button>
+                  <Button variant="ghost" onClick={() => { setPayMethod(null); setStkMsg(null); }}>Back</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 pt-2">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-slate-700 space-y-1">
+                  <p className="font-semibold text-emerald-800">How to pay manually:</p>
+                  <p>1. Go to M-PESA on your phone</p>
+                  <p>2. Choose <b>Lipa na M-PESA</b> → <b>Buy Goods</b></p>
+                  <p>3. Enter Till Number <b className="text-lg">123456</b></p>
+                  <p>4. Enter the amount and your PIN, then confirm</p>
+                  <p>5. Paste the M-PESA confirmation message below</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Paste M-PESA message</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Paste the full M-PESA confirmation message (with the code)…"
+                    value={mpesa.proof}
+                    onChange={(e) => setMpesa({ ...mpesa, proof: e.target.value })}
+                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">M-PESA code</label>
+                  <input
+                    value={mpesa.code}
+                    onChange={(e) => setMpesa({ ...mpesa, code: e.target.value })}
+                    placeholder="e.g. SFS5K7X2QZ"
+                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    loading={submittingPay}
+                    icon={<ExternalLink size={15} />}
+                    className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
+                    onClick={handleManualSubmit}
+                  >
+                    Submit for Review
+                  </Button>
+                  <Button variant="ghost" onClick={() => { setPayMethod(null); setStkMsg(null); }}>Back</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

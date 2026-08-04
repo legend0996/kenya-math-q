@@ -34,16 +34,18 @@ export const addStudentBySchool = async (req, res) => {
       });
     }
 
+    const cName = String(full_name).trim().toUpperCase();
+
     const result = await pool.query(
       `INSERT INTO students (full_name, grade, school)
        VALUES (?, ?, ?)`,
-      [full_name, grade, school],
+      [cName, grade, school],
     );
 
     res.json({
       success: true,
       message: "Student added successfully",
-      student: { id: result.insertId, full_name, grade, school },
+      student: { id: result.insertId, full_name: cName, grade, school },
     });
   } catch (error) {
     console.error("ADD STUDENT ERROR:", error);
@@ -60,7 +62,7 @@ export const getSchoolStudents = async (req, res) => {
     const result = await pool.query(
       `SELECT id, full_name, email, grade, school, county, paid, registered, created_at
        FROM students
-       WHERE school=?
+       WHERE UPPER(school)=UPPER(?)
        ORDER BY id DESC`,
       [school],
     );
@@ -96,11 +98,10 @@ export const getSchoolOverview = async (req, res) => {
          ON r.student_id = s.id AND r.contest_id = ?
        LEFT JOIN results res
          ON res.student_id = s.id AND res.contest_id = ?
-       WHERE s.school=?
+       WHERE UPPER(s.school)=UPPER(?)
        ORDER BY s.id DESC`,
       [contest?.id ?? 0, contest?.id ?? 0, school],
     );
-
     res.json({
       success: true,
       contest,

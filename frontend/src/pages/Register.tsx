@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { UserPlus, GraduationCap, School, Eye, EyeOff } from "lucide-react";
+import { UserPlus, GraduationCap, School, Users, Eye, EyeOff } from "lucide-react";
 import Image from "../components/Image";
 import { Button } from "../components/ui/Button";
 import { apiUrl } from "../utils/api";
@@ -12,7 +12,7 @@ const COUNTIES = [
 ];
 
 export default function Register() {
-  const [type, setType]       = useState<"student" | "school">("student");
+  const [type, setType]       = useState<"student" | "school" | "parent">("student");
   const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -20,11 +20,16 @@ export default function Register() {
 
   const [form, setForm] = useState({
     full_name: "", name: "", email: "", password: "",
-    school: "", grade: "", county: "",
+    school: "", grade: "", county: "", phone: "",
   });
 
-  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm({ ...form, [key]: e.target.value });
+  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    let v = e.target.value;
+    // Names / school / county in CAPITALS; email always lowercase; password untouched
+    if (key === "email") v = v.toLowerCase();
+    else if (key !== "password") v = v.toUpperCase();
+    setForm({ ...form, [key]: v });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +40,9 @@ export default function Register() {
     const endpoint =
       type === "student"
         ? apiUrl("/api/auth/student/register")
-        : apiUrl("/api/auth/school/register");
+        : type === "school"
+          ? apiUrl("/api/auth/school/register")
+          : apiUrl("/api/auth/parent/register");
 
     try {
       const res  = await fetch(endpoint, {
@@ -47,7 +54,7 @@ export default function Register() {
 
       if (res.ok) {
         setSuccess(data.message || "Registration successful! You can now log in.");
-        setForm({ full_name: "", name: "", email: "", password: "", school: "", grade: "", county: "" });
+        setForm({ full_name: "", name: "", email: "", password: "", school: "", grade: "", county: "", phone: "" });
       } else {
         setError(data.error || "Registration failed. Please check your details.");
       }
@@ -82,11 +89,12 @@ export default function Register() {
             {[
               { key: "student", label: "Student",  Icon: GraduationCap },
               { key: "school",  label: "School",   Icon: School },
+              { key: "parent",  label: "Parent",   Icon: Users },
             ].map(({ key, label, Icon }) => (
               <button
                 key={key}
                 type="button"
-                onClick={() => { setType(key as "student" | "school"); setError(""); setSuccess(""); }}
+                onClick={() => { setType(key as "student" | "school" | "parent"); setError(""); setSuccess(""); }}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   type === key
                     ? "bg-white text-blue-700 shadow-sm"
@@ -148,6 +156,24 @@ export default function Register() {
                     <option value="">Select county…</option>
                     {COUNTIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
+                </div>
+              </>
+            )}
+
+            {type === "parent" && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
+                  <input placeholder="John Kamau" required value={form.full_name} onChange={set("full_name")}
+                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Phone Number
+                    <span className="text-slate-400 font-normal"> (use the number recorded for your child)</span>
+                  </label>
+                  <input type="tel" placeholder="07XX XXX XXX" required value={form.phone} onChange={set("phone")}
+                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
                 </div>
               </>
             )}

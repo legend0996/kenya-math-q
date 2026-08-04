@@ -16,6 +16,7 @@ import certificateRoutes from "./routes/certificateRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
 import assistantRoutes from "./routes/assistantRoutes.js";
+import parentRoutes from "./routes/parentRoutes.js";
 import { finalizeExpiredDrafts } from "./controllers/examController.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -75,6 +76,7 @@ app.use("/api/certificate", certificateRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/support", supportRoutes);
 app.use("/api/assistant", assistantRoutes);
+app.use("/api/parent", parentRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend running 🚀");

@@ -5,6 +5,11 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.production
+backend/.env.production
+
+# Next.js leftover type stub (project migrated to Vite)
+frontend/next-env.d.ts
 
 # Build output
 .next/

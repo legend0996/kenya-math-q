@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { apiUrl, authHeaders, getUser } from "../utils/api";
-import { Send, LifeBuoy } from "lucide-react";
+import { Send, LifeBuoy, Check, CheckCheck } from "lucide-react";
 import { Button } from "../components/ui/Button";
 
 interface Msg {
@@ -10,6 +10,7 @@ interface Msg {
   author_id: number;
   sender_name?: string;
   message: string;
+  read_flag?: number | boolean;
   created_at: string;
 }
 
@@ -108,6 +109,11 @@ export default function SupportPage() {
                   }`}>
                     {m.message}
                   </div>
+                  {mine && (
+                    <p className={`text-[10px] mt-0.5 inline-flex items-center gap-0.5 ${m.read_flag ? "text-emerald-500" : "text-slate-400"}`}>
+                      {m.read_flag ? <><CheckCheck size={11} /> Seen</> : <><Check size={11} /> Sent</>}
+                    </p>
+                  )}
                 </div>
               );
             })}

@@ -1,6 +1,6 @@
 
-import { useEffect, useState } from "react";
-import { BookOpen, Plus, Trash2, CheckCircle2, AlertCircle, ExternalLink, FileDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { BookOpen, Plus, Trash2, CheckCircle2, AlertCircle, ExternalLink, FileDown, Upload } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
@@ -32,10 +32,37 @@ export default function MaterialsManager() {
   const [contentType, setContentType] = useState("link");
   const [content, setContent] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const showFeedback = (type: "success" | "error", msg: string) => {
     setFeedback({ type, msg });
     setTimeout(() => setFeedback(null), 3500);
+  };
+
+  const uploadFile = async (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    setUploading(true);
+    try {
+      const res = await fetch(apiUrl("/api/owner/materials/upload"), {
+        method: "POST",
+        headers: { Authorization: authHeaders().Authorization },
+        body: fd,
+      });
+      const d = await res.json();
+      if (d.success) {
+        setContent(d.url);
+        showFeedback("success", `Uploaded: ${d.original}`);
+      } else {
+        showFeedback("error", d.error || "Upload failed");
+      }
+    } catch {
+      showFeedback("error", "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
   };
 
   const load = () => {
@@ -133,12 +160,35 @@ export default function MaterialsManager() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              {contentType === "text" ? "Notes content" : "Link / file URL"}
+              {contentType === "text"
+                ? "Notes content"
+                : contentType === "file"
+                  ? "Upload a file (PDF / image / document)"
+                  : "Link / file URL"}
             </label>
             {contentType === "text" ? (
               <textarea rows={5} value={content} onChange={(e) => setContent(e.target.value)}
                 placeholder="Type the study notes here…"
                 className="w-full px-4 py-3 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none" />
+            ) : contentType === "file" ? (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <label className="flex-1 flex items-center gap-3 px-4 py-3 text-sm bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-blue-400 transition-colors">
+                  <Upload size={16} className="text-blue-500 shrink-0" />
+                  <span className={content ? "text-slate-700 font-medium" : "text-slate-400"}>
+                    {content ? `Uploaded ✓ ${content}` : uploading ? "Uploading…" : "Choose a file from your computer"}
+                  </span>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); }}
+                  />
+                </label>
+                {content && (
+                  <Button type="button" variant="outline" onClick={() => setContent("")}>Remove file</Button>
+                )}
+              </div>
             ) : (
               <input value={content} onChange={(e) => setContent(e.target.value)}
                 placeholder={contentType === "file" ? "https://your-host/uploads/notes.pdf" : "https://example.com/resource"}

@@ -30,9 +30,8 @@ export const getMarkableContests = async (req, res) => {
         `SELECT DISTINCT c.id, c.name, c.year, c.cat_total, c.marking_mode,
                 COUNT(r.student_id) AS submissions,
                 SUM(CASE WHEN r.marked=0 THEN 1 ELSE 0 END) AS unmarked
-         FROM contests c
+FROM contests c
          LEFT JOIN results r ON r.contest_id = c.id
-         WHERE c.is_test = 0
          GROUP BY c.id, c.name, c.year, c.cat_total, c.marking_mode
          ORDER BY c.id DESC`,
       )

@@ -14,6 +14,8 @@ import Settings from "./pages/Settings";
 import SupportPage from "./pages/Support";
 import StudentReviewPage from "./pages/StudentReview";
 import SchoolDashboard from "./pages/SchoolDashboard";
+import ParentDashboard from "./pages/ParentDashboard";
+import ParentChildDetail from "./pages/ParentChildDetail";
 import ForgotPassword from "./pages/ForgotPassword";
 import OwnerLogin from "./pages/OwnerLogin";
 import OwnerDashboard from "./pages/owner-dashboard/OwnerDashboard";
@@ -35,6 +37,8 @@ export default function App() {
           <Route path="/support" element={<SupportPage />} />
           <Route path="/student-review" element={<StudentReviewPage />} />
           <Route path="/school-dashboard" element={<SchoolDashboard />} />
+          <Route path="/parent-dashboard" element={<ParentDashboard />} />
+          <Route path="/parent-dashboard/child/:studentId" element={<ParentChildDetail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/owner-login-7843-secure" element={<OwnerLogin />} />
           <Route path="/owner-dashboard" element={<OwnerDashboard />} />

@@ -5,9 +5,11 @@ import { verifyOwner } from "../middleware/ownerAuth.js";
 import {
   registerStudent,
   registerSchool,
+  registerParent,
   checkIdentifier,
   loginStudent,
   loginSchool,
+  loginParent,
   logout,
   changePassword,
   changeEmail,
@@ -20,11 +22,13 @@ const router = express.Router();
 // REGISTER (throttled)
 router.post("/student/register", authLimiter, registerStudent);
 router.post("/school/register", authLimiter, registerSchool);
+router.post("/parent/register", authLimiter, registerParent);
 
 // TWO-STEP LOGIN (throttled)
 router.post("/check", authLimiter, checkIdentifier);
 router.post("/student/login", loginLimiter, loginStudent);
 router.post("/school/login", loginLimiter, loginSchool);
+router.post("/parent/login", loginLimiter, loginParent);
 
 // ACCOUNT SETTINGS (student/school or owner)
 router.post("/change-password", verifyToken, changePassword);

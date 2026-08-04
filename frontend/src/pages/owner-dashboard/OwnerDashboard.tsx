@@ -4,7 +4,7 @@ import {
   BarChart2, School, Trophy, CreditCard, FileQuestion,
   FlaskConical, ShieldCheck, MessageSquare, PencilRuler,
   CheckCircle2, XCircle, Play, LogOut, Plus, Users, ChevronRight,
-  AlertCircle, Clock, ImageIcon, FileText, BookOpen, Bot, type LucideIcon,
+  AlertCircle, Clock, ImageIcon, FileText, BookOpen, Bot, CalendarDays, UsersRound, type LucideIcon,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { Card, StatCard } from "../../components/ui/Card";
@@ -19,14 +19,16 @@ import Marking from "./marking";
 import InstructionsManager from "./instructions";
 import MaterialsManager from "./materials";
 import AssistantManager from "./assistant";
+import RegistrationsManager from "./registrations";
+import QuestionsManager from "./questions";
+import ParentsManager from "./parents";
 import { apiUrl, authHeaders, getToken } from "../../utils/api";
 
-type Tab = "overview" | "schools" | "contests" | "questions" | "payments" | "results" | "certificates" | "test" | "admins" | "support" | "marking" | "instructions" | "materials" | "assistant";
+type Tab = "overview" | "schools" | "contests" | "questions" | "payments" | "parents" | "results" | "certificates" | "test" | "admins" | "support" | "marking" | "instructions" | "materials" | "assistant";
 
 type Stats = { students: number; schools: number; registered: number; paid: number; pending_payments: number };
 type SchoolRow = { id: number; name: string; email: string; county: string; status: string };
-type ContestRow = { id: number; name: string; year: number; status: string; registration_open: boolean; start_time?: string; entry_fee?: number | string | null };
-type StudentRow = { id: number; full_name?: string; name?: string; school: string; grade: string; paid: boolean };
+type ContestRow = { id: number; name: string; year: number; status: string; registration_open: boolean; start_time?: string; entry_fee?: number | string | null; grade_schedule?: Record<string, { start: string; end: string }> | null };
 type PaymentRow = { id: number; full_name?: string; school?: string; mpesa_code?: string; proof_text?: string };
 
 const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
@@ -37,6 +39,7 @@ const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
   { key: "instructions", label: "Instructions", Icon: FileText },
   { key: "materials", label: "Materials", Icon: BookOpen },
   { key: "payments", label: "Payments", Icon: CreditCard },
+  { key: "parents", label: "Parents", Icon: UsersRound },
   { key: "results", label: "Results", Icon: CheckCircle2 },
   { key: "certificates", label: "Certificates", Icon: ImageIcon },
   { key: "test", label: "Test Contests", Icon: FlaskConical },
@@ -48,9 +51,19 @@ const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
 
 const GRADES = ["Grade 7", "Grade 8", "Grade 9", "Form 1", "Form 2", "Form 3", "Form 4"];
 
+const fmtSlotDate = (v: string) =>
+  new Date(v).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+const slotStatus = (start: string, end: string): "upcoming" | "live" | "ended" => {
+  const now = Date.now();
+  if (now < new Date(start).getTime()) return "upcoming";
+  if (now <= new Date(end).getTime()) return "live";
+  return "ended";
+};
+
 const PERM: Record<string, Tab[]> = {
   manage_schools: ["schools"],
-  manage_contests: ["contests", "payments"],
+  manage_contests: ["contests", "payments", "parents"],
   manage_questions: ["questions", "test", "instructions", "materials"],
   manage_results: ["results", "marking"],
   manage_admin: ["admins"],
@@ -61,10 +74,10 @@ export default function OwnerDashboard() {
   const [tab, setTab] = useState<Tab>("overview");
   const [perms, setPerms] = useState<string[]>([]);
   const [isPrimary, setIsPrimary] = useState(false);
+  const [adminName, setAdminName] = useState("");
   const [stats, setStats] = useState<Stats | null>(null);
   const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [contests, setContests] = useState<ContestRow[]>([]);
-  const [students, setStudents] = useState<StudentRow[]>([]);
   const [pendingPays, setPendingPays] = useState<PaymentRow[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -81,18 +94,10 @@ export default function OwnerDashboard() {
   const [times, setTimes] = useState<Record<string, number>>({});
   const [savingTimes, setSavingTimes] = useState(false);
 
-  // Question form
-  const [grade, setGrade] = useState("Form 1");
-  const [qType, setQType] = useState("mcq");
-  const [question, setQuestion] = useState("");
-  const [option_a, setOptionA] = useState("");
-  const [option_b, setOptionB] = useState("");
-  const [option_c, setOptionC] = useState("");
-  const [option_d, setOptionD] = useState("");
-  const [correct_answer, setCorrect] = useState("");
-  const [marks, setMarks] = useState(1);
-  const [workingSpace, setWorkingSpace] = useState(240);
-  const [addingQ, setAddingQ] = useState(false);
+  // Per-grade contest days editor
+  const [daysContest, setDaysContest] = useState<ContestRow | null>(null);
+  const [days, setDays] = useState<Record<string, { start: string; end: string } | null>>({});
+  const [savingDays, setSavingDays] = useState(false);
 
   const showFeedback = (type: "success" | "error", msg: string) => {
     setFeedback({ type, msg });
@@ -107,16 +112,14 @@ export default function OwnerDashboard() {
       fetch(apiUrl("/api/owner/stats"), { headers: authHeaders() }).then((r) => r.json()),
       fetch(apiUrl("/api/owner/schools/pending"), { headers: authHeaders() }).then((r) => r.json()),
       fetch(apiUrl("/api/owner/contest/all"), { headers: authHeaders() }).then((r) => r.json()),
-      fetch(apiUrl("/api/owner/registrations"), { headers: authHeaders() }).then((r) => r.json()),
       fetch(apiUrl("/api/payment/pending"), { headers: authHeaders() }).then((r) => r.json()),
       fetch(apiUrl("/api/owner/me"), { headers: authHeaders() }).then((r) => r.json()),
-    ]).then(([s, sc, co, st, pp, me]) => {
+    ]).then(([s, sc, co, pp, me]) => {
       if (s.success) setStats(s.stats);
       if (sc.success) setSchools(sc.schools || []);
       if (co.success) setContests(co.contests || []);
-      if (st.success) setStudents(st.students || st.registrations || []);
       if (pp.success) setPendingPays(pp.payments || []);
-      if (me?.success) { setPerms(me.owner?.permissions || []); setIsPrimary(!!me.owner?.is_primary); }
+      if (me?.success) { setPerms(me.owner?.permissions || []); setIsPrimary(!!me.owner?.is_primary); setAdminName(me.owner?.name || ""); }
     }).finally(() => setPageLoading(false));
   }, []);
 
@@ -223,39 +226,40 @@ export default function OwnerDashboard() {
     }
   };
 
-  const handleAddQuestion = async () => {
-    if (!question.trim() || !correct_answer.trim()) return;
-    setAddingQ(true);
+  const openDays = (c: ContestRow) => {
+    setDaysContest(c);
+    const map: Record<string, { start: string; end: string } | null> = {};
+    const schedule = c.grade_schedule || {};
+    GRADES.forEach((g) => {
+      const slot = schedule[g];
+      map[g] = slot ? { start: slot.start, end: slot.end || slot.start } : null;
+    });
+    setDays(map);
+  };
+
+  const saveDays = async () => {
+    if (!daysContest) return;
+    setSavingDays(true);
     try {
-      const res = await fetch(apiUrl("/api/owner/question/create"), {
+      const res = await fetch(apiUrl("/api/owner/contest/grade-schedule"), {
         method: "POST", headers: authHeaders(),
-        body: JSON.stringify({
-          contest_id: contests[0]?.id || 1, grade, type: qType, question,
-          option_a, option_b, option_c, option_d, correct_answer, marks,
-          working_space: workingSpace,
-        }),
+        body: JSON.stringify({ contest_id: daysContest.id, grade_schedule: days }),
       });
       const d = await res.json();
       if (d.success) {
-        showFeedback("success", "Question added successfully");
-        setQuestion(""); setOptionA(""); setOptionB(""); setOptionC(""); setOptionD(""); setCorrect(""); setMarks(1); setWorkingSpace(240);
+        showFeedback("success", "Grade contest days saved");
+        setDaysContest(null);
+        const r = await fetch(apiUrl("/api/owner/contest/all"), { headers: authHeaders() });
+        const dd = await r.json();
+        if (dd.success) setContests(dd.contests || []);
       } else {
-        showFeedback("error", d.error || "Failed to add question");
+        showFeedback("error", d.error || "Failed to save grade days");
       }
-    } catch { showFeedback("error", "Failed to add question"); }
-    finally { setAddingQ(false); }
-  };
-
-  const markPaid = async (student_id: number) => {
-    const contestId = contests.find((c) => c.registration_open)?.id || contests[0]?.id || 1;
-    await fetch(apiUrl("/api/owner/payment/mark"), {
-      method: "POST", headers: authHeaders(),
-      body: JSON.stringify({ student_id, contest_id: contestId }),
-    });
-    const r = await fetch(apiUrl("/api/owner/registrations"), { headers: authHeaders() });
-    const d = await r.json();
-    if (d.success) setStudents(d.students || d.registrations || []);
-    showFeedback("success", "Payment marked");
+    } catch {
+      showFeedback("error", "Failed to save grade days");
+    } finally {
+      setSavingDays(false);
+    }
   };
 
   const reviewPayment = async (paymentId: number, status: string) => {
@@ -285,7 +289,9 @@ export default function OwnerDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">Admin Panel</p>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Owner Dashboard</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+              {adminName ? `Welcome back, ${adminName}` : "Owner Dashboard"} 👋
+            </h1>
           </div>
           <Button variant="ghost" icon={<LogOut size={16} />}
             className="text-red-500 hover:bg-red-50 hover:text-red-600"
@@ -440,7 +446,11 @@ export default function OwnerDashboard() {
                 <div className="text-center py-10 text-slate-400"><Trophy size={32} className="mx-auto mb-2 opacity-30" /><p>No contests yet</p></div>
               ) : (
                 <div className="divide-y divide-slate-50">
-                  {contests.map((c) => (
+                  {contests.map((c) => {
+                    const slots = GRADES
+                      .filter((g) => c.grade_schedule?.[g]?.start)
+                      .map((g) => ({ grade: g, ...c.grade_schedule![g]! }));
+                    return (
                     <div key={c.id} className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50">
                       <div>
                         <p className="font-semibold text-slate-900">{c.name}</p>
@@ -448,6 +458,28 @@ export default function OwnerDashboard() {
                           {c.year}
                           {c.start_time ? ` • starts ${new Date(c.start_time).toLocaleString()}` : ""}
                         </p>
+                        {slots.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {slots.map(({ grade, start, end }) => {
+                              const st = slotStatus(start, end);
+                              return (
+                                <span key={grade}
+                                  className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                                    st === "live"
+                                      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                      : st === "upcoming"
+                                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                                        : "bg-slate-100 border-slate-200 text-slate-500"
+                                  }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    st === "live" ? "bg-emerald-500" : st === "upcoming" ? "bg-blue-500" : "bg-slate-400"
+                                  }`} />
+                                  {grade}: {fmtSlotDate(start)}{st === "live" ? " · LIVE" : st === "ended" ? " · ended" : ""}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         {c.status === "live" && <Badge variant="success" dot>Live</Badge>}
@@ -456,6 +488,9 @@ export default function OwnerDashboard() {
                         {c.registration_open ? <Badge variant="success">Reg Open</Badge> : <Badge variant="default">Reg Closed</Badge>}
                         <Button size="sm" variant="outline" icon={<Clock size={13} />} onClick={() => openTimes(c)}>
                           Grade Times
+                        </Button>
+                        <Button size="sm" variant="outline" icon={<CalendarDays size={13} />} onClick={() => openDays(c)}>
+                          Grade Days
                         </Button>
                         <span className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-600">
                           Fee: KES {c.entry_fee ?? 0}
@@ -477,7 +512,8 @@ export default function OwnerDashboard() {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Card>
@@ -507,82 +543,74 @@ export default function OwnerDashboard() {
                 </div>
               </Card>
             )}
+
+            {/* Per-grade contest days editor */}
+            {daysContest && (
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-bold text-slate-900 flex items-center gap-2">
+                    <CalendarDays size={18} className="text-blue-600" /> Contest Days — {daysContest.name}
+                  </h2>
+                  <Button variant="ghost" size="sm" onClick={() => setDaysContest(null)}>✕ Close</Button>
+                </div>
+                <p className="text-sm text-slate-500 mb-1">
+                  Give each grade (class) its own contest day. Unchecked grades keep the global contest window, so all classes can still take the exam at the same time.
+                </p>
+                <p className="text-xs text-slate-400 mb-4">Times shown in local time.</p>
+                <div className="space-y-3">
+                  {GRADES.map((g) => {
+                    const on = !!days[g];
+                    return (
+                      <div key={g} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-50 rounded-xl p-3">
+                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 w-28 shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={(e) =>
+                              setDays((p) => ({
+                                ...p,
+                                [g]: e.target.checked
+                                  ? { start: p[g]?.start || "", end: p[g]?.end || "" }
+                                  : null,
+                              }))
+                            }
+                            className="w-4 h-4 accent-blue-600"
+                          />
+                          {g}
+                        </label>
+                        {on ? (
+                          <>
+                            <input
+                              type="datetime-local"
+                              value={days[g]?.start?.slice(0, 16) || ""}
+                              onChange={(e) => setDays((p) => ({ ...p, [g]: { start: e.target.value, end: p[g]?.end || e.target.value } }))}
+                              className="flex-1 min-w-0 px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                            />
+                            <input
+                              type="datetime-local"
+                              value={days[g]?.end?.slice(0, 16) || ""}
+                              onChange={(e) => setDays((p) => ({ ...p, [g]: { start: p[g]?.start || e.target.value, end: e.target.value } }))}
+                              className="flex-1 min-w-0 px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                            />
+                          </>
+                        ) : (
+                          <span className="text-sm text-slate-400">Uses global contest window</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-5">
+                  <Button loading={savingDays} icon={<CheckCircle2 size={15} />} onClick={saveDays}>Save Grade Days</Button>
+                </div>
+              </Card>
+            )}
           </div>
         )}
 
         {/* ── Questions ── */}
         {tab === "questions" && (
-          <Card>
-            <h2 className="font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <FileQuestion size={18} className="text-blue-600" /> Add Question to Contest
-            </h2>
-            <div className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Grade / Form</label>
-                  <select value={grade} onChange={(e) => setGrade(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all">
-                    {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Question Type</label>
-                  <select value={qType} onChange={(e) => setQType(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all">
-                    <option value="mcq">Multiple Choice (MCQ)</option>
-                    <option value="theory">Theory / Open-ended</option>
-                    <option value="construction">Construction / Compass &amp; Ruler</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Question Text</label>
-                <textarea rows={3} value={question} onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Enter the question…"
-                  className="w-full px-4 py-3 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none" />
-              </div>
-
-              {qType === "mcq" && (
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {[
-                    { label: "Option A", val: option_a, set: setOptionA },
-                    { label: "Option B", val: option_b, set: setOptionB },
-                    { label: "Option C", val: option_c, set: setOptionC },
-                    { label: "Option D", val: option_d, set: setOptionD },
-                  ].map(({ label, val, set }) => (
-                    <div key={label}>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
-                      <input value={val} onChange={(e) => set(e.target.value)} placeholder={label}
-                        className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Correct Answer</label>
-                  <input value={correct_answer} onChange={(e) => setCorrect(e.target.value)} placeholder="Exact correct answer"
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Marks</label>
-                  <input type="number" min={1} max={10} value={marks} onChange={(e) => setMarks(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Working space height (px)</label>
-                  <input type="number" min={120} max={720} step={20} value={workingSpace} onChange={(e) => setWorkingSpace(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-                </div>
-              </div>
-
-              <Button icon={<Plus size={16} />} loading={addingQ} onClick={handleAddQuestion}>
-                Add Question
-              </Button>
-            </div>
-          </Card>
+          <QuestionsManager />
         )}
 
         {/* ── Payments ── */}
@@ -627,46 +655,12 @@ export default function OwnerDashboard() {
               )}
             </Card>
 
-            {/* Registrations */}
-            <Card padding="none">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h2 className="font-bold text-slate-900 flex items-center gap-2">
-                  <Users size={18} className="text-slate-400" /> Registrations
-                </h2>
-                <Badge variant="default">{students.length} total</Badge>
-              </div>
-              {students.length === 0 ? (
-                <div className="text-center py-14 text-slate-400">
-                  <CreditCard size={36} className="mx-auto mb-3 opacity-30" />
-                  <p>No registrations yet</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-50">
-                  {students.map((s) => (
-                    <div key={s.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50">
-                      <div>
-                        <p className="font-semibold text-slate-900">{s.full_name || s.name}</p>
-                        <p className="text-sm text-slate-500">{s.school} · {s.grade}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {s.paid ? (
-                          <Badge variant="success" dot>Paid</Badge>
-                        ) : (
-                          <>
-                            <Badge variant="warning">Unpaid</Badge>
-                            <Button size="sm" icon={<CheckCircle2 size={13} />}
-                              className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
-                              onClick={() => markPaid(s.id)}>Mark Paid</Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
+            <RegistrationsManager />
           </div>
         )}
+
+        {/* ── Parents ── */}
+        {tab === "parents" && <ParentsManager />}
 
         {/* ── Results ── */}
         {tab === "results" && <ResultsManagement />}

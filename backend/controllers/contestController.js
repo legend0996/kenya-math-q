@@ -9,6 +9,19 @@ const contestStatus = (contest) => {
   return "ended";
 };
 
+// Grade-aware exam window: uses the admin-set per-grade schedule, falling back
+// to the contest's global start/end. Mirrors resolveContestWindow in examController.
+const gradeWindow = (contest, grade) => {
+  const schedule = contest.grade_schedule;
+  if (schedule && typeof schedule === "object") {
+    const slot = schedule[grade];
+    if (slot && slot.start) {
+      return { start_time: slot.start, end_time: slot.end || slot.start };
+    }
+  }
+  return { start_time: contest.start_time, end_time: contest.end_time };
+};
+
 // 🚀 CREATE CONTEST (ADMIN)
 export const createContest = async (req, res) => {
   try {
@@ -107,11 +120,6 @@ export const registerForContest = async (req, res) => {
       return res.status(400).json({ error: "Registration is currently closed" });
     }
 
-    // Test contests must be admin-started to register
-    if (contest.is_test && !contest.test_open) {
-      return res.status(403).json({ error: "This test contest is not open right now" });
-    }
-
     const existing = await pool.query(
       "SELECT * FROM registrations WHERE student_id=? AND contest_id=?",
       [student_id, contest.id],
@@ -166,44 +174,64 @@ export const getMyContestStatus = async (req, res) => {
       return res.json({ success: true, contest: null });
     }
 
-    const contest = contestRes.rows[0];
-    const reg = (
-      await pool.query(
-        "SELECT * FROM registrations WHERE student_id=? AND contest_id=?",
-        [student_id, contest.id],
-      )
-    ).rows[0];
+      const contest = contestRes.rows[0];
+      const reg = (
+        await pool.query(
+          "SELECT * FROM registrations WHERE student_id=? AND contest_id=?",
+          [student_id, contest.id],
+        )
+      ).rows[0];
 
-    const result = (
-      await pool.query(
-        "SELECT * FROM results WHERE student_id=? AND contest_id=?",
-        [student_id, contest.id],
-      )
-    ).rows[0];
+      const studentRow = (
+        await pool.query("SELECT grade FROM students WHERE id=?", [student_id])
+      ).rows[0];
+      const win = gradeWindow(contest, studentRow?.grade);
 
-    const session = (
-      await pool.query(
-        "SELECT status, current_index, time_remaining FROM exam_sessions WHERE student_id=? AND contest_id=?",
-        [student_id, contest.id],
-      )
-    ).rows[0];
+      // Test contests have no fixed window — they are "live" only once the admin
+      // opens them (test_open), otherwise "upcoming". Real contests use the
+      // grade-aware schedule so each grade's day controls the Start button.
+      let status, start_time, end_time;
+      if (contest.is_test) {
+        status = contest.test_open ? "live" : "upcoming";
+        start_time = null;
+        end_time = null;
+      } else {
+        start_time = win.start_time;
+        end_time = win.end_time;
+        status = contestStatus({ start_time: win.start_time, end_time: win.end_time });
+      }
 
-    res.json({
-      success: true,
-      contest: {
-        id: contest.id,
-        name: contest.name,
-        year: contest.year,
-        start_time: contest.start_time,
-        end_time: contest.end_time,
-        status: contestStatus(contest),
-        results_released: contest.results_released,
-      },
-      registered: !!reg,
-      payment_status: reg?.payment_status || null,
-      result,
-      has_draft: !!session && session.status === "draft",
-    });
+      const result = (
+        await pool.query(
+          "SELECT * FROM results WHERE student_id=? AND contest_id=?",
+          [student_id, contest.id],
+        )
+      ).rows[0];
+
+      const session = (
+        await pool.query(
+          "SELECT status, current_index, time_remaining FROM exam_sessions WHERE student_id=? AND contest_id=?",
+          [student_id, contest.id],
+        )
+      ).rows[0];
+
+      res.json({
+        success: true,
+        contest: {
+          id: contest.id,
+          name: contest.name,
+          year: contest.year,
+          is_test: !!contest.is_test,
+          start_time,
+          end_time,
+          status,
+          results_released: contest.results_released,
+        },
+        registered: !!reg,
+        payment_status: reg?.payment_status || null,
+        result,
+        has_draft: !!session && session.status === "draft",
+      });
   } catch (error) {
     console.error("MY CONTEST STATUS ERROR:", error);
     res.status(500).json({ error: error.message });

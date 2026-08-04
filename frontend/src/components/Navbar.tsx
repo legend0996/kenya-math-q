@@ -40,6 +40,7 @@ export default function Navbar() {
     if (!user) { window.location.href = "/login"; return; }
     window.location.href =
       user.role === "school" ? "/school-dashboard"
+      : user.role === "parent" ? "/parent-dashboard"
       : user.role === "owner" || user.role === "admin" ? "/owner-dashboard"
       : "/dashboard";
   };

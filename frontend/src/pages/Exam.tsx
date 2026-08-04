@@ -30,7 +30,8 @@ type Phase =
   | { name: "continue"; info: { answered: number; time: number; total: number; lastIndex: number } }
   | { name: "running" }
   | { name: "submitted"; score?: number; grade?: string }
-  | { name: "no-questions" };
+  | { name: "no-questions" }
+  | { name: "not-attempted" };
 
 const OPTION_LABELS = ["A", "B", "C", "D"];
 
@@ -161,6 +162,10 @@ export default function Exam() {
 
         if (d.submitted) {
           setPhase({ name: "submitted", score: d.result?.score, grade: d.result?.grade });
+          return;
+        }
+        if (d.not_attempted) {
+          setPhase({ name: "not-attempted" });
           return;
         }
         if (!d.success) {
@@ -361,6 +366,28 @@ export default function Exam() {
           <p className="font-semibold text-slate-700">No questions available for your grade yet</p>
           <p className="text-sm text-slate-500 mt-1">Please contact your school administrator.</p>
           <div className="mt-6">
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (phase.name === "not-attempted") {
+    return (
+      <main className="pt-16 min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="text-center">
+          <AlertTriangle size={36} className="text-amber-400 mx-auto mb-3" />
+          <p className="font-semibold text-slate-700">You didn&apos;t answer any questions</p>
+          <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
+            Your previous attempt was not recorded because nothing was answered. You can start again while the contest is still open.
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-3">
+            {contestId && (
+              <Button icon={<Play size={15} />} onClick={() => { setPhase({ name: "loading" }); loadExam(contestId); }}>
+                Try Again
+              </Button>
+            )}
             <Button variant="outline" onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
           </div>
         </div>

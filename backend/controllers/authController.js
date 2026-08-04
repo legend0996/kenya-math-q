@@ -9,6 +9,7 @@ const TABLES = {
   student: "students",
   school: "schools",
   owner: "owners",
+  parent: "parents",
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,15 +18,19 @@ const validAuth = (pw) => typeof pw === "string" && pw.length >= 8;
 const validEmail = (e) => typeof e === "string" && EMAIL_RE.test(e);
 const tableHas = (role) => Boolean(TABLES[role]);
 
+// Normalize text fields: names / schools / counties in CAPITALS, email lowercase.
+const normName = (v) => String(v || "").trim().toUpperCase();
+const normEmail = (v) => String(v || "").trim().toLowerCase();
+
 // Find an account by email OR username across students / schools / owners.
 // Returns { role, id, email, username, name } or null.
 export const lookupByIdentifier = async (identifier) => {
   const id = String(identifier || "").trim().toLowerCase();
   if (!id) return null;
 
-  for (const role of ["student", "school", "owner"]) {
+  for (const role of ["student", "school", "owner", "parent"]) {
     const table = TABLES[role];
-    const nameCol = role === "student" ? "full_name" : "name";
+    const nameCol = role === "student" || role === "parent" ? "full_name" : "name";
     const res = await pool.query(
       `SELECT id, email, username, ${nameCol} AS name FROM ${table} WHERE LOWER(email)=? OR LOWER(username)=? LIMIT 1`,
       [id, id],
@@ -83,10 +88,13 @@ export const registerStudent = async (req, res) => {
     }
 
     const uname = username ? String(username).trim() : null;
+    const cEmail = normEmail(email);
+    const cName = normName(full_name);
+    const cSchool = normName(school);
 
     const exists = await pool.query(
       "SELECT * FROM students WHERE email=? OR (username IS NOT NULL AND username=?)",
-      [email, uname],
+      [cEmail, uname],
     );
     if (exists.rows.length > 0) {
       return res.status(400).json({ error: "Email or username already registered" });
@@ -97,13 +105,13 @@ export const registerStudent = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO students (full_name, email, username, password, school, grade)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [full_name, email, uname, hashed, school, grade],
+      [cName, cEmail, uname, hashed, cSchool, grade],
     );
 
     res.json({
       success: true,
       message: "Student registered successfully",
-      user: { id: result.insertId, full_name, email, username: uname, school, grade },
+      user: { id: result.insertId, full_name: cName, email: cEmail, username: uname, school: cSchool, grade },
     });
   } catch (error) {
     console.error("REGISTER STUDENT ERROR:", error);
@@ -127,9 +135,12 @@ export const registerSchool = async (req, res) => {
     }
 
     const uname = username ? String(username).trim() : null;
+    const cEmail = normEmail(email);
+    const cName = normName(name);
+    const cCounty = normName(county);
     const exists = await pool.query(
       "SELECT * FROM schools WHERE email=? OR username IS NOT NULL AND username=?",
-      [email, uname],
+      [cEmail, uname],
     );
     if (exists.rows.length > 0) {
       return res.status(400).json({ error: "School email or username already registered" });
@@ -140,13 +151,13 @@ export const registerSchool = async (req, res) => {
     const result = await pool.query(
       `INSERT INTO schools (name, email, username, password, county, status)
        VALUES (?, ?, ?, ?, ?, 'pending')`,
-      [name, email, uname, hashed, county],
+      [cName, cEmail, uname, hashed, cCounty],
     );
 
     res.json({
       success: true,
       message: "School registered. Await admin approval.",
-      school: { id: result.insertId, name, status: "pending" },
+      school: { id: result.insertId, name: cName, status: "pending" },
     });
   } catch (error) {
     console.error("REGISTER SCHOOL ERROR:", error);
@@ -158,6 +169,51 @@ const signToken = (payload, res) => {
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
   issueAuthCookie(res, token);
   return token;
+};
+
+// 👨‍👩‍👧 PARENT REGISTER
+export const registerParent = async (req, res) => {
+  try {
+    const { full_name, email, username, password, phone } = req.body;
+
+    if (!full_name || !email || !password) {
+      return res.status(400).json({ error: "Full name, email and password are required" });
+    }
+    if (!validEmail(email)) {
+      return res.status(400).json({ error: "Enter a valid email address" });
+    }
+    if (!validAuth(password)) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
+
+    const uname = username ? String(username).trim() : null;
+    const cEmail = normEmail(email);
+    const cName = normName(full_name);
+    const exists = await pool.query(
+      "SELECT * FROM parents WHERE email=? OR (username IS NOT NULL AND username=?)",
+      [cEmail, uname],
+    );
+    if (exists.rows.length > 0) {
+      return res.status(400).json({ error: "Email or username already registered" });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      `INSERT INTO parents (full_name, email, username, password, phone)
+       VALUES (?, ?, ?, ?, ?)`,
+      [cName, cEmail, uname, hashed, phone || null],
+    );
+
+    res.json({
+      success: true,
+      message: "Parent registered successfully. You can now log in and link your children.",
+      user: { id: result.insertId, full_name: cName, email: cEmail, username: uname, phone: phone || null },
+    });
+  } catch (error) {
+    console.error("REGISTER PARENT ERROR:", error);
+    res.status(500).json({ error: "Registration failed. Please try again." });
+  }
 };
 
 // 👨‍🎓 STUDENT LOGIN (email OR username)
@@ -180,7 +236,7 @@ export const loginStudent = async (req, res) => {
     const student = user.rows[0];
     // Promoted student admins land on the admin dashboard when they log in
     const role = student.is_admin ? "owner" : "student";
-    const token = signToken({ id: student.id, role, school: student.school }, res);
+    const token = signToken({ id: student.id, role, school: student.school, name: student.full_name }, res);
 
     res.json({
       success: true,
@@ -231,6 +287,44 @@ export const loginSchool = async (req, res) => {
     });
   } catch (error) {
     console.error("LOGIN SCHOOL ERROR:", error);
+    res.status(500).json({ error: "Login failed. Please try again." });
+  }
+};
+
+// 👨‍👩‍👧 PARENT LOGIN (email OR username)
+export const loginParent = async (req, res) => {
+  try {
+    const identifier = req.body.identifier || req.body.email;
+    const { password } = req.body;
+
+    const acct = await lookupByIdentifier(identifier);
+    if (!acct || acct.role !== "parent") {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const user = await pool.query("SELECT * FROM parents WHERE id=?", [acct.id]);
+    if (user.rows.length === 0) return res.status(401).json({ error: "Invalid credentials" });
+
+    const valid = await bcrypt.compare(password, user.rows[0].password);
+    if (!valid) return res.status(401).json({ error: "Invalid credentials" });
+
+    const parent = user.rows[0];
+    const token = signToken({ id: parent.id, role: "parent", name: parent.full_name, phone: parent.phone }, res);
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: parent.id,
+        name: parent.full_name,
+        email: parent.email,
+        username: parent.username,
+        phone: parent.phone,
+        role: "parent",
+      },
+    });
+  } catch (error) {
+    console.error("LOGIN PARENT ERROR:", error);
     res.status(500).json({ error: "Login failed. Please try again." });
   }
 };

@@ -3,6 +3,9 @@ import pool from "../config/db.js";
 const DEFAULT_MINUTES = 10;
 const SUBMIT_GRACE_SECONDS = 120;
 
+// MySQL DATETIME (UTC) — pool uses timezone "Z", so keep everything UTC.
+const mysqlDatetime = (ms) => new Date(ms).toISOString().slice(0, 19).replace("T", " ");
+
 const computeGrade = (score, total) => {
   const pct = total > 0 ? (score / total) * 100 : 0;
   if (pct >= 80) return "Distinction";
@@ -91,6 +94,19 @@ const getMarkingMode = async (contest_id) => {
   return (c?.marking_mode || "auto") === "manual" ? "manual" : "auto";
 };
 
+// Each grade may have its own contest day (contests.grade_schedule JSON).
+// Grades without a schedule entry fall back to the contest's global window.
+const resolveContestWindow = (contest, grade) => {
+  const schedule = contest.grade_schedule;
+  if (schedule && typeof schedule === "object") {
+    const slot = schedule[grade];
+    if (slot && slot.start) {
+      return { start_time: slot.start, end_time: slot.end || slot.start };
+    }
+  }
+  return { start_time: contest.start_time, end_time: contest.end_time };
+};
+
 // 🎯 LOAD EXAM / RESUME DRAFT (student identity from token)
 export const getExamData = async (req, res) => {
   try {
@@ -107,7 +123,7 @@ export const getExamData = async (req, res) => {
     const grade = student.rows[0].grade;
 
     const contest = await pool.query(
-      "SELECT id, name, start_time, end_time, status, results_released, is_test, test_open FROM contests WHERE id=?",
+      "SELECT id, name, start_time, end_time, status, results_released, is_test, test_open, grade_schedule FROM contests WHERE id=?",
       [contest_id],
     );
     if (contest.rows.length === 0) {
@@ -201,18 +217,19 @@ export const getExamData = async (req, res) => {
     let fresh = false;
 
     if (!session) {
-      const contest = contest.rows[0];
+      const contestRow = contest.rows[0];
       const now = Date.now();
+      const win = resolveContestWindow(contestRow, grade);
       // Test contests only check the open flag (no fixed window); real contests use start/end time
-      if (contest.is_test) {
-        if (!contest.test_open) {
+      if (contestRow.is_test) {
+        if (!contestRow.test_open) {
           return res.status(403).json({ error: "The test contest is not open" });
         }
       } else {
-        if (contest.start_time && now < new Date(contest.start_time).getTime()) {
+        if (win.start_time && now < new Date(win.start_time).getTime()) {
           return res.status(403).json({ error: "The contest has not started yet" });
         }
-        if (contest.end_time && now > new Date(contest.end_time).getTime()) {
+        if (win.end_time && now > new Date(win.end_time).getTime()) {
           return res.status(403).json({ error: "The contest has ended" });
         }
       }
@@ -222,8 +239,8 @@ export const getExamData = async (req, res) => {
            (student_id, contest_id, status, current_index, answers, time_remaining, total_seconds,
             started_at, expires_at, shuffle_seed, violations)
          VALUES (?, ?, 'draft', 0, '{}', ?, ?, ?, ?, ?, 0)`,
-        [student_id, contest_id, totalSeconds, new Date(now).toISOString(),
-         new Date(now + totalSeconds * 1000).toISOString(), Math.floor(Math.random() * 90000) + 10000],
+        [student_id, contest_id, totalSeconds, totalSeconds, mysqlDatetime(now),
+         mysqlDatetime(now + totalSeconds * 1000), Math.floor(Math.random() * 90000) + 10000],
       );
       session = (
         await pool.query(
@@ -239,6 +256,25 @@ export const getExamData = async (req, res) => {
 
     // ⏰ Expired and never submitted → auto-submit saved draft
     if (nowMs > expiresMs) {
+      const answered = Object.keys(session.answers || {}).filter((k) => /^\d+$/.test(k)).length;
+
+      // Nothing was answered — this was never a real attempt. Drop the draft so
+      // the student isn't counted as having entered, and let them start fresh
+      // (the contest window check below will stop them if it has ended).
+      if (answered === 0) {
+        await pool.query(
+          "DELETE FROM exam_sessions WHERE student_id=? AND contest_id=?",
+          [student_id, contest_id],
+        );
+        return res.json({
+          success: true,
+          submitted: false,
+          not_attempted: true,
+          message: "You didn't answer any questions, so this attempt was not recorded.",
+          contest: { id: contest.rows[0].id, name: contest.rows[0].name },
+        });
+      }
+
       const mode = await getMarkingMode(contest_id);
       if (mode === "manual") {
         await finalizeManualSession(student_id, contest_id, true);
@@ -316,10 +352,13 @@ export const acceptInstructions = async (req, res) => {
     }
 
     const contestRow = (await pool.query(
-      "SELECT id, is_test, test_open, start_time, end_time FROM contests WHERE id=?",
+      "SELECT id, is_test, test_open, start_time, end_time, grade_schedule FROM contests WHERE id=?",
       [contest_id],
     )).rows[0];
     if (!contestRow) return res.status(404).json({ error: "Contest not found" });
+
+    const student = (await pool.query("SELECT grade FROM students WHERE id=?", [student_id])).rows[0];
+    const win = resolveContestWindow(contestRow, student?.grade);
 
     const now = Date.now();
     if (contestRow.is_test) {
@@ -330,15 +369,14 @@ export const acceptInstructions = async (req, res) => {
       if (reg.rows[0].payment_status !== "paid") {
         return res.status(403).json({ error: "Payment required before starting the exam", payment_required: true });
       }
-      if (contestRow.start_time && now < new Date(contestRow.start_time).getTime()) {
+      if (win.start_time && now < new Date(win.start_time).getTime()) {
         return res.status(403).json({ error: "The contest has not started yet" });
       }
-      if (contestRow.end_time && now > new Date(contestRow.end_time).getTime()) {
+      if (win.end_time && now > new Date(win.end_time).getTime()) {
         return res.status(403).json({ error: "The contest has ended" });
       }
     }
 
-    const student = (await pool.query("SELECT grade FROM students WHERE id=?", [student_id])).rows[0];
     const paper = await pool.query(
       "SELECT duration_minutes FROM contest_papers WHERE contest_id=? AND grade=?",
       [contest_id, student?.grade],
@@ -360,8 +398,8 @@ export const acceptInstructions = async (req, res) => {
            (student_id, contest_id, status, current_index, answers, time_remaining, total_seconds,
             started_at, expires_at, shuffle_seed, violations, instructions_accepted)
          VALUES (?, ?, 'draft', 0, '{}', ?, ?, ?, ?, ?, 0, 1)`,
-        [student_id, contest_id, totalSeconds, new Date(now).toISOString(),
-         new Date(now + totalSeconds * 1000).toISOString(), Math.floor(Math.random() * 90000) + 10000],
+        [student_id, contest_id, totalSeconds, totalSeconds, mysqlDatetime(now),
+         mysqlDatetime(now + totalSeconds * 1000), Math.floor(Math.random() * 90000) + 10000],
       );
     }
 
@@ -580,6 +618,19 @@ export const finalizeExpiredDrafts = async () => {
   let done = 0;
   for (const s of sessions.rows) {
     try {
+      const answers = (typeof s.answers === "object" && s.answers) ? s.answers : {};
+      const answeredCount = Object.keys(answers).filter((k) => /^\d+$/.test(k)).length;
+
+      // Student never answered anything → this is NOT an attempt. Delete the
+      // draft so they are not counted as having entered the contest.
+      if (answeredCount === 0) {
+        await pool.query(
+          "DELETE FROM exam_sessions WHERE student_id=? AND contest_id=?",
+          [s.student_id, s.contest_id],
+        );
+        continue;
+      }
+
       const gradeRes = await pool.query(
         "SELECT grade FROM students WHERE id=?",
         [s.student_id],
@@ -593,7 +644,6 @@ export const finalizeExpiredDrafts = async () => {
         [s.contest_id, grade],
       );
 
-      const answers = (typeof s.answers === "object" && s.answers) ? s.answers : {};
       const answerMap = {};
       for (const [qid, val] of Object.entries(answers)) {
         if (/^\d+$/.test(qid)) answerMap[qid] = String(val);

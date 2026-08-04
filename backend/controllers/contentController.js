@@ -1,4 +1,31 @@
 import pool from "../config/db.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const MATERIALS_DIR = path.join(__dirname, "../uploads/materials");
+fs.mkdirSync(MATERIALS_DIR, { recursive: true });
+
+export { MATERIALS_DIR };
+
+// ➕ UPLOAD A MATERIAL FILE (handled by multer in the route) — returns a public URL
+export const uploadMaterialFile = (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+    res.json({
+      success: true,
+      url: `/uploads/materials/${req.file.filename}`,
+      original: req.file.originalname || "",
+    });
+  } catch (error) {
+    console.error("MATERIAL UPLOAD ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
 // ── CONTEST INSTRUCTIONS (compulsory written paper instructions, one per grade) ──
 // Table `contest_instructions` (contest_id, grade, instructions). The student must
