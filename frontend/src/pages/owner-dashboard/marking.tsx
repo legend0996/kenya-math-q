@@ -6,7 +6,9 @@ import { Card } from "../../components/ui/Card";
 import { Select } from "../../components/ui/Input";
 import AnnotationCanvas from "../../components/AnnotationCanvas";
 import WorkingView from "../../components/WorkingView";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, Wand2 } from "lucide-react";
+
+const GRADES = ["Grade 7", "Grade 8", "Grade 9", "Form 1", "Form 2", "Form 3", "Form 4"];
 
 interface Contest { id: number; name: string; cat_total: string | number | null; submissions: number; unmarked?: number; marking_mode?: string }
 interface Sub { student_id: number; name: string; school: string; grade: string; score: string | number; percentage: string | number | null; marked: number }
@@ -32,6 +34,8 @@ export default function Marking() {
   const [annotations, setAnnotations] = useState<Record<number, string>>({});
   const [catTotal, setCatTotal] = useState<number>(0);
   const [busy, setBusy] = useState(false);
+  const [autoGrade, setAutoGrade] = useState("");
+  const [autoBusy, setAutoBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: "ok" | "err"; m: string } | null>(null);
 
   useEffect(() => {
@@ -111,6 +115,29 @@ export default function Marking() {
 
   const loadSubsAndWs = () => { if (contestId) loadSubs(contestId); };
 
+  const runAutoGrade = async () => {
+    if (!contestId || !autoGrade) return;
+    if (!confirm(`Auto-mark ${autoGrade}? The backend compares each student's final answer to the correct answer and awards full marks on every match. Existing marks will be overwritten.`)) return;
+    setAutoBusy(true); setMsg(null);
+    try {
+      const r = await fetch(apiUrl("/api/owner/marking/auto-grade"), {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ contest_id: contestId, grade: autoGrade }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setMsg({ t: "ok", m: `${d.grade}: ${d.marked_students} student(s) marked — ${d.correct_answers}/${d.total_comparisons} correct answers. Total marks per paper: ${d.questions_total_marks}.` });
+      } else {
+        setMsg({ t: "err", m: d.error || "Auto-mark failed" });
+      }
+    } catch {
+      setMsg({ t: "err", m: "Connection error" });
+    } finally {
+      setAutoBusy(false);
+      loadSubsAndWs();
+    }
+  };
+
   return (
     <div className="space-y-5">
       {msg && (
@@ -150,6 +177,31 @@ export default function Marking() {
               className="text-xs px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Release papers</button>
             <button onClick={() => release(true)}
               className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100">Hide papers</button>
+          </div>
+        )}
+
+        {contestId > 0 && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-violet-50 border border-violet-200 p-3 rounded-xl mt-3">
+            <Wand2 size={18} className="text-violet-600 shrink-0 hidden sm:block" />
+            <div className="text-sm">
+              <p className="font-semibold text-slate-800 flex items-center gap-1.5">
+                Auto-mark a whole grade
+              </p>
+              <p className="text-xs text-slate-500">
+                Pick a class, press Marks — the backend compares the admin&apos;s answer to each student&apos;s final answer and awards the marks.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <select value={autoGrade} onChange={(e) => setAutoGrade(e.target.value)}
+                className="px-3 py-2 text-sm bg-white rounded-lg border border-slate-200 outline-none">
+                <option value="">Grade…</option>
+                {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <Button loading={autoBusy} disabled={!autoGrade} icon={<Wand2 size={15} />}
+                onClick={runAutoGrade}>
+                Marks
+              </Button>
+            </div>
           </div>
         )}
         {ws && (

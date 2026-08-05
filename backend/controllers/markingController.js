@@ -182,6 +182,100 @@ export const saveMarking = async (req, res) => {
   }
 };
 
+// ⚡ AUTO-MARK AN ENTIRE GRADE — the backend compares the admin's answer
+// (questions.correct_answer) against each student's final answer. Every
+// matching answer gets the full marks for that question. Each student's
+// score, percentage and grade are recomputed and saved.
+export const autoMarkGrade = async (req, res) => {
+  try {
+    const { contest_id, grade } = req.body;
+    if (!contest_id || !grade) {
+      return res.status(400).json({ error: "contest_id and grade are required" });
+    }
+
+    const questions = (
+      await pool.query(
+        "SELECT id, correct_answer, marks FROM questions WHERE contest_id=? AND grade=?",
+        [contest_id, grade],
+      )
+    ).rows;
+    if (questions.length === 0) {
+      return res.status(400).json({ error: "No questions found for this grade" });
+    }
+
+    // Students in this grade who submitted answers for the contest
+    const students = (
+      await pool.query(
+        `SELECT DISTINCT a.student_id
+         FROM answers a
+         JOIN students s ON s.id = a.student_id
+         WHERE a.contest_id=? AND s.grade=?`,
+        [contest_id, grade],
+      )
+    ).rows;
+
+    const questionTotal = questions.reduce((a, q) => a + Number(q.marks || 1), 0);
+    let markedStudents = 0;
+    let correct = 0;
+    let totalComparisons = 0;
+
+    for (const { student_id } of students) {
+      const ansRes = await pool.query(
+        "SELECT question_id, answer, final_answer FROM answers WHERE student_id=? AND contest_id=?",
+        [student_id, contest_id],
+      );
+      const ansMap = {};
+      for (const a of ansRes.rows) {
+        const val = a.final_answer || a.answer || "";
+        if (val) ansMap[a.question_id] = String(val).trim();
+      }
+
+      let score = 0;
+      for (const q of questions) {
+        const correctAns = String(q.correct_answer || "").trim();
+        const given = (ansMap[q.id] || "").trim();
+        const isMatch = correctAns.length > 0 && given.length > 0 && correctAns === given;
+        const awarded = isMatch ? Number(q.marks || 1) : 0;
+        if (isMatch) correct++;
+        totalComparisons++;
+        score += awarded;
+        await pool.query(
+          `INSERT INTO question_marks (student_id, contest_id, question_id, marks_awarded, annotation, corrected)
+           VALUES (?,?,?,?,NULL,1)
+           ON DUPLICATE KEY UPDATE marks_awarded=VALUES(marks_awarded), annotation=NULL, corrected=1`,
+          [student_id, contest_id, q.id, awarded],
+        );
+      }
+
+      const percentage = questionTotal > 0 ? Math.round((score / questionTotal) * 10000) / 100 : 0;
+      const gradeText = computeGrade(percentage);
+
+      await pool.query(
+        `INSERT INTO results (student_id, contest_id, score, percentage, cat_total, grade, marked, completed)
+         VALUES (?,?,?,?,?,?,1,1)
+         ON DUPLICATE KEY UPDATE
+           score=VALUES(score), percentage=VALUES(percentage), cat_total=VALUES(cat_total),
+           grade=VALUES(grade), marked=1`,
+        [student_id, contest_id, score, percentage, questionTotal, gradeText],
+      );
+      markedStudents++;
+    }
+
+    res.json({
+      success: true,
+      grade,
+      marked_students: markedStudents,
+      total_questions: questions.length,
+      questions_total_marks: questionTotal,
+      correct_answers: correct,
+      total_comparisons: totalComparisons,
+    });
+  } catch (error) {
+    console.error("AUTO MARK GRADE ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // 🔧 SET contest marking mode ('auto' | 'manual')
 export const setMarkingMode = async (req, res) => {
   try {

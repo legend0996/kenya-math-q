@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ChatbotWidget from "./components/ChatbotWidget";
@@ -19,8 +20,20 @@ import ParentChildDetail from "./pages/ParentChildDetail";
 import ForgotPassword from "./pages/ForgotPassword";
 import OwnerLogin from "./pages/OwnerLogin";
 import OwnerDashboard from "./pages/owner-dashboard/OwnerDashboard";
+import Tuition from "./pages/Tuition";
+import { applySavedTheme, readSavedTheme, applyTheme, THEME_EVENT } from "./theme";
 
 export default function App() {
+  useEffect(() => {
+    // Dashboard theme colour (saved in localStorage by the Settings/dashboard picker)
+    applySavedTheme();
+    const onChange = () => {
+      applyTheme(readSavedTheme(), false);
+    };
+    window.addEventListener(THEME_EVENT, onChange);
+    return () => window.removeEventListener(THEME_EVENT, onChange);
+  }, []);
+
   return (
     <div className="flex flex-col min-h-full flex-1">
       <Navbar />
@@ -33,6 +46,7 @@ export default function App() {
           <Route path="/exam" element={<Exam />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/contests" element={<Contests />} />
+          <Route path="/tuition" element={<Tuition />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/student-review" element={<StudentReviewPage />} />

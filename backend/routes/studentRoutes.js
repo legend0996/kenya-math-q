@@ -1,6 +1,6 @@
 import express from "express";
 import { registerStudent } from "../controllers/studentController.js";
-import { getStudentMaterials, updateStudentClass } from "../controllers/contentController.js";
+import { getStudentMaterials, updateStudentClass, setStudentTheme } from "../controllers/contentController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -15,5 +15,8 @@ router.get("/materials", verifyToken, getStudentMaterials);
 
 // 🎓 Student updates their own class / form / grade
 router.post("/update-class", verifyToken, updateStudentClass);
+
+// 🎨 Student updates their dashboard theme colour
+router.post("/theme", verifyToken, setStudentTheme);
 
 export default router;

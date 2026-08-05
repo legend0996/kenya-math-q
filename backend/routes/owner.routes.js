@@ -47,6 +47,7 @@ import {
   setMarkingMode,
   releaseResults,
   hideResults,
+  autoMarkGrade,
 } from "../controllers/markingController.js";
 import {
   createTestContest,
@@ -164,6 +165,7 @@ router.post("/marking/save", verifyOwner, saveMarking);
 router.post("/marking/mode", verifyOwner, setMarkingMode);
 router.post("/marking/release", verifyOwner, releaseResults);
 router.post("/marking/hide", verifyOwner, hideResults);
+router.post("/marking/auto-grade", verifyOwner, autoMarkGrade);
 
 // 💬 SUPPORT (admin side — needs reply_support permission)
 router.get("/support/messages", verifyOwner, requirePermission("reply_support"), getMessages);

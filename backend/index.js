@@ -96,6 +96,15 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
+// Email configuration status (SMTP). Emails (certificate/reset) only send when
+// SMTP_HOST, EMAIL_USER and EMAIL_PASS are set. Certificates are ALSO shown in
+// the student dashboard, so email is optional, not required.
+const _emailConfigured =
+  Boolean(process.env.SMTP_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS);
+console.log(
+  `${_emailConfigured ? "✅" : "⚠️"} SMTP email ${_emailConfigured ? "configured" : "NOT configured"} (set SMTP_HOST, EMAIL_USER & EMAIL_PASS to enable sending).`,
+);
+
 // ⏲️ Auto-submit expired exam sessions (idempotent: UNIQUE result key guards races)
 setInterval(() => {
   finalizeExpiredDrafts().then((n) => {

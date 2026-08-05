@@ -5,13 +5,14 @@ import {
   Trophy, BookOpen, Award, BarChart2, Calendar,
   LogOut, ChevronRight, Download, Play, Clock, CheckCircle,
   UserPlus, CreditCard, Lock, AlertCircle, ExternalLink,
-  Smartphone, Receipt, X,
+  Smartphone, Receipt, X, Check,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card, StatCard } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
 import { apiUrl, authHeaders, getUser } from "../utils/api";
+import { THEMES, type Theme, themeByColor, applyTheme, emitThemeChange, readSavedTheme } from "../theme";
 
 type User = { id?: number; name?: string; school?: string };
 type Contest = { id: number; name: string; status: string; start_time: string; results_released?: boolean; is_test?: boolean };
@@ -41,6 +42,7 @@ export default function Dashboard() {
   const [materials, setMaterials] = useState<{ id: number; title: string; description?: string; content_type: string; content?: string; created_at: string }[]>([]);
   const [myPastTests, setMyPastTests] = useState<{ id: number; name: string; is_test?: number | boolean; start_time?: string; score?: number | null; result_grade?: string | null; completed?: number | boolean }[]>([]);
   const [myGrade, setMyGrade] = useState<string>("");
+  const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
 
   const load = useCallback(async () => {
     try {
@@ -64,6 +66,11 @@ export default function Dashboard() {
         setMaterials(materialsData.materials || []);
         setMyPastTests(materialsData.pastTests || []);
         setMyGrade(materialsData.grade || "");
+        if (materialsData.theme) {
+          const t = themeByColor(materialsData.theme);
+          applyTheme(t, true);
+          setTheme(t);
+        }
       }
     } finally {
       setPageLoading(false);
@@ -82,6 +89,20 @@ export default function Dashboard() {
   const showFeedback = (type: "success" | "error", msg: string) => {
     setFeedback({ type, msg });
     setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const pickTheme = async (t: Theme) => {
+    setTheme(t);
+    applyTheme(t, true);
+    emitThemeChange();
+    try {
+      await fetch(apiUrl("/api/student/theme"), {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ theme_color: t.c600 }),
+      });
+    } catch {
+      /* theme still works locally even if save fails */
+    }
   };
 
   const doRegister = async () => {
@@ -225,6 +246,38 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Dashboard theme colour — 20 choices */}
+        <Card className="mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold text-slate-900">Dashboard colour</h2>
+              <p className="text-sm text-slate-500">Pick the colour you like — it changes your whole dashboard.</p>
+            </div>
+            <span className="text-xs font-semibold px-3 py-1 rounded-lg"
+              style={{ backgroundColor: theme.c100, color: theme.c700 }}>
+              {theme.name}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2.5 mt-4">
+            {THEMES.map((t) => {
+              const selected = theme.name === t.name;
+              return (
+                <button
+                  key={t.name}
+                  title={t.name}
+                  onClick={() => pickTheme(t)}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform duration-150 ${
+                    selected ? "ring-2 ring-offset-2 ring-slate-400 scale-110" : "hover:scale-110"
+                  }`}
+                  style={{ backgroundColor: t.c600 }}
+                >
+                  {selected && <Check size={16} className="text-white" />}
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
         {/* Stats */}
         <div className="grid sm:grid-cols-3 gap-4 mb-8">
           <StatCard label="Your Score" value={result?.score ?? "—"} icon={<BarChart2 size={22} />} />
@@ -277,7 +330,13 @@ export default function Dashboard() {
                     <Badge variant="success" dot>Registered • Paid</Badge>
                   ) : (
                     <Badge variant="warning" dot>
-                      {(paymentStatus === "pending" || paymentStatus === "stk_pending") ? "Payment under review" : "Payment required"}
+                      {paymentStatus === "pending"
+                        ? "M-PESA Unconfirmed"
+                        : paymentStatus === "stk_pending"
+                          ? "STK Confirming…"
+                          : paymentStatus === "rejected"
+                            ? "Payment Rejected"
+                            : "Payment required"}
                     </Badge>
                   )}
                 </div>
@@ -298,7 +357,14 @@ export default function Dashboard() {
                         <p className="text-sm text-slate-500 mt-1">The contest is live. {hasDraft ? "Your draft is saved — resume anytime." : "Ready when you are."}</p>
                       ) : live && !paid ? (
                         <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
-                          <Lock size={13} /> The exam is ongoing but you must complete payment to unlock it.
+                          <Lock size={13} />{" "}
+                          {paymentStatus === "pending"
+                            ? "You have registered. Awaiting admin approval of your M-PESA payment."
+                            : paymentStatus === "stk_pending"
+                              ? "Your M-PESA payment is being confirmed automatically — this takes a moment."
+                              : paymentStatus === "rejected"
+                                ? "Your payment was rejected. Please pay again."
+                                : "The exam is ongoing but you must complete payment to unlock it."}
                         </p>
                       ) : upcoming ? (
                         <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
@@ -326,7 +392,12 @@ export default function Dashboard() {
                       </Button>
                     ) : live && !paid ? (
                       <Button size="lg" disabled className="opacity-50">
-                        <Lock size={15} /> Do Exam
+                        <Lock size={15} />{" "}
+                        {paymentStatus === "pending"
+                          ? "Registered — awaiting admin approval"
+                          : paymentStatus === "stk_pending"
+                            ? "Confirming M-PESA…"
+                            : "Payment required"}
                       </Button>
                     ) : upcoming ? (
                       <Button size="lg" disabled>Not started</Button>
@@ -347,8 +418,8 @@ export default function Dashboard() {
                   {paymentStatus === "pending" || paymentStatus === "stk_pending" ? (
                     <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm px-4 py-3 rounded-xl">
                       ⏳ {paymentStatus === "stk_pending"
-                        ? "Your M-PESA payment is being confirmed. Once confirmed you can start the exam."
-                        : "Your payment is under review. Once approved you can start the exam."}
+                        ? "Your M-PESA (STK) payment is being confirmed automatically — once confirmed you can start the exam."
+                        : "Your registration is recorded as M-PESA Unconfirmed. Await admin approval, then you can start the exam."}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -497,20 +568,27 @@ export default function Dashboard() {
                             ? "bg-amber-50 text-amber-600"
                             : m.content_type === "link"
                               ? "bg-blue-50 text-blue-600"
-                              : "bg-emerald-50 text-emerald-600"
+                              : m.content_type === "video"
+                                ? "bg-red-50 text-red-600"
+                                : "bg-emerald-50 text-emerald-600"
                         }`}>
-                          {m.content_type === "file" ? <Download size={18} /> : m.content_type === "link" ? <ExternalLink size={18} /> : <BookOpen size={18} />}
+                          {m.content_type === "file" ? <Download size={18} /> : m.content_type === "link" ? <ExternalLink size={18} /> : m.content_type === "video" ? <Play size={18} /> : <BookOpen size={18} />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-slate-900">{m.title}</p>
                           {m.description && <p className="text-sm text-slate-500 mt-0.5">{m.description}</p>}
                           <p className="text-xs text-slate-400 mt-1">
-                            {m.content_type === "link" ? "Link" : m.content_type === "file" ? "File" : "Notes"}
+                            {m.content_type === "link" ? "Link" : m.content_type === "file" ? "File" : m.content_type === "video" ? "Video" : "Notes"}
                             {" · "}{new Date(m.created_at).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
-                      {m.content_type === "text" && m.content ? (
+                      {m.content_type === "video" ? (
+                        <button onClick={() => navigate("/tuition")}
+                          className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                          <Play size={14} /> Watch on Tuition page <ChevronRight size={13} />
+                        </button>
+                      ) : m.content_type === "text" && m.content ? (
                         <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-3 mt-3 whitespace-pre-wrap">{m.content}</p>
                       ) : m.content ? (
                         <a href={m.content} target="_blank" rel="noopener noreferrer"

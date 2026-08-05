@@ -7,8 +7,6 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { PageSpinner } from "../components/ui/Spinner";
-import WorkingCanvas from "../components/WorkingCanvas";
-import WritingText from "../components/WritingText";
 import { apiUrl, authHeaders, getToken } from "../utils/api";
 
 type Question = {
@@ -47,8 +45,6 @@ export default function Exam() {
   const [phase, setPhase] = useState<Phase>({ name: "loading" });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  // working holds the student's written blocks OR (for construction) a drawing dataURL
-  const [working, setWorking] = useState<Record<number, string[] | string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -57,7 +53,6 @@ export default function Exam() {
   const [violations, setViolations] = useState(0);
 
   const answersRef = useRef(answers);
-  const workingRef = useRef(working);
   const indexRef = useRef(currentIndex);
   const timeRef = useRef(timeLeft);
   const phaseRef = useRef<Phase>(phase);
@@ -67,7 +62,6 @@ export default function Exam() {
   const violationsRef = useRef(0);
 
   answersRef.current = answers;
-  workingRef.current = working;
   indexRef.current = currentIndex;
   timeRef.current = timeLeft;
   phaseRef.current = phase;
@@ -89,13 +83,7 @@ export default function Exam() {
         body: JSON.stringify({
           contest_id: contestIdRef.current,
           current_index: indexRef.current,
-          // numeric answers + working drawings (working_<questionId>) in one map
-          answers: {
-            ...answersRef.current,
-            ...Object.fromEntries(
-              Object.entries(workingRef.current || {}).map(([id, d]) => [`working_${id}`, d]),
-            ),
-          },
+          answers: answersRef.current,
           violations: violationsRef.current,
         }),
       });
@@ -116,7 +104,6 @@ export default function Exam() {
       const formatted = Object.entries(answersRef.current).map(([qid, answer]) => ({
         question_id: Number(qid),
         answer,
-        working: workingRef.current?.[Number(qid)] || undefined,
       }));
 
       const res = await fetch(apiUrl("/api/exam/submit"), {
@@ -184,15 +171,11 @@ export default function Exam() {
 
         const rawAnswers = d.answers || {};
         const numAnswers: Record<number, string> = {};
-        const workingMap: Record<number, string[] | string> = {};
         for (const [k, v] of Object.entries(rawAnswers)) {
-          const w = /^working_(\d+)$/.exec(k);
-          if (w) workingMap[Number(w[1])] = (Array.isArray(v) ? v : String(v)) as string[] | string;
-          else if (/^\d+$/.test(k)) numAnswers[Number(k)] = v as string;
+          if (/^\d+$/.test(k)) numAnswers[Number(k)] = v as string;
         }
         setQuestions(d.questions);
         setAnswers(numAnswers);
-        setWorking(workingMap);
         setTimeLeft(d.session.time_remaining);
         setViolations(d.session.violations || 0);
         violationsRef.current = d.session.violations || 0;
@@ -317,6 +300,56 @@ export default function Exam() {
       window.removeEventListener("blur", recordViolation);
     };
   }, [phase.name, saveDraft, handleSubmit]);
+
+  // 🛡️ Anti-screenshot: block right-click, screenshot/print shortcuts, copying
+  // and keep the exam text non-selectable. (Best-effort hardening.)
+  useEffect(() => {
+    if (phase.name !== "running") return;
+
+    const onContextMenu = (e: MouseEvent) => e.preventDefault();
+    const onKeyDown = (e: KeyboardEvent) => {
+      const key = e.key;
+      const blocked =
+        key === "PrintScreen" ||
+        ((e.ctrlKey || e.metaKey) && ["p", "s", "u", "i", "j", "c", "x", "v", "a"].includes(key.toLowerCase())) ||
+        (key === "F12");
+      if (blocked && phaseRef.current.name === "running") {
+        e.preventDefault();
+      }
+    };
+    const onCopy = (e: ClipboardEvent) => e.preventDefault();
+    const onCut = (e: ClipboardEvent) => e.preventDefault();
+
+    document.addEventListener("contextmenu", onContextMenu);
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("copy", onCopy);
+    document.addEventListener("cut", onCut);
+
+    const style = document.createElement("style");
+    style.textContent = `
+      @media print {
+        body * { visibility: hidden !important; }
+        body::before {
+          content: "Screenshots and printing are disabled during the exam.";
+          visibility: visible !important;
+          display: block;
+          padding: 40px;
+          font: 16px sans-serif;
+          color: #333;
+        }
+      }
+      .exam-secure { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.removeEventListener("contextmenu", onContextMenu);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("copy", onCopy);
+      document.removeEventListener("cut", onCut);
+      style.remove();
+    };
+  }, [phase.name]);
 
   const handleAnswer = (qid: number, value: string) =>
     setAnswers((p) => ({ ...p, [qid]: value }));
@@ -494,7 +527,7 @@ export default function Exam() {
   const isOpen = !isMCQ || opts.length === 0;
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50">
+    <main className="pt-16 min-h-screen bg-slate-50 exam-secure">
       <div className="max-w-3xl mx-auto px-4 py-8">
 
         {/* Top bar */}
@@ -590,35 +623,12 @@ export default function Exam() {
               </div>
             )}
             <p className="text-xs text-slate-400 mt-1.5">
-              Rough work and drawings go in the &quot;Working space&quot; below — only this final answer is auto-marked.
+              Enter only your final answer — each question is marked automatically. Questions appear one at a time and the order is randomised.
             </p>
           </div>
         </div>
 
-        {/* Working / rough space — type your answer; add blocks if you run out of room */}
-        <div className="mt-4">
-          {q.type === "construction" ? (
-            <>
-              <p className="text-sm font-semibold text-slate-700 mb-2">Construction space (compass &amp; ruler)</p>
-              <WorkingCanvas
-                value={typeof working[q.id] === "string" ? (working[q.id] as string) : ""}
-                onChange={(d) => setWorking((p) => ({ ...p, [q.id]: d }))}
-                height={q.working_space ?? 220}
-              />
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-semibold text-slate-700 mb-2">Working / writing space</p>
-              <WritingText
-                value={Array.isArray(working[q.id]) ? (working[q.id] as string[]) : []}
-                onChange={(blocks) => setWorking((p) => ({ ...p, [q.id]: blocks }))}
-                height={q.working_space ?? 220}
-              />
-            </>
-          )}
-        </div>
-
-      {/* Navigation */}
+{/* Navigation — one question at a time; press Next to reveal the next */}
         <div className="flex items-center justify-between gap-3">
           <Button
             variant="outline"
@@ -629,29 +639,16 @@ export default function Exam() {
             Previous
           </Button>
 
-          <div className="flex flex-wrap gap-1.5 justify-center">
-            {questions.map((qq, i) => (
-              <button
-                key={qq.id}
-                onClick={() => setCurrentIndex(i)}
-                className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${
-                  i === currentIndex
-                    ? "bg-blue-600 text-white"
-                    : answers[qq.id]
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
+          <span className="text-xs text-slate-400 font-medium shrink-0">
+            {currentIndex + 1} / {questions.length}
+          </span>
 
           {isLast ? (
             <Button
               variant="primary"
               icon={<Send size={15} />}
               loading={submitting}
+              disabled={!answers[q.id]}
               onClick={() => handleSubmit()}
               className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200"
             >
@@ -660,12 +657,18 @@ export default function Exam() {
           ) : (
             <Button
               icon={<ChevronRight size={16} />}
+              disabled={!answers[q.id]}
               onClick={() => setCurrentIndex((p) => p + 1)}
             >
               Next
             </Button>
           )}
         </div>
+        {!answers[q.id] && (
+          <p className="text-center text-xs text-slate-400 mt-2">
+            Answer this question to move on.
+          </p>
+        )}
       </div>
     </main>
   );

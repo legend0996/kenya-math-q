@@ -103,7 +103,7 @@ export const saveMaterial = async (req, res) => {
     if (!grade || !title) {
       return res.status(400).json({ error: "grade and title are required" });
     }
-    const type = ["link", "text", "file"].includes(content_type) ? content_type : "link";
+    const type = ["link", "text", "file", "video"].includes(content_type) ? content_type : "link";
     const body =
       id != null
         ? await pool.query(
@@ -133,11 +133,48 @@ export const deleteMaterial = async (req, res) => {
   }
 };
 
+// ── PUBLIC TUITION PAGE: streamed YouTube videos added by the admin ──
+// Every video-type revision material is shown on the public /tuition page
+// (no login needed). Admins add them via the Materials tab (link + name +
+// description); they are streamed right from YouTube.
+export const getTuitionVideos = async (req, res) => {
+  try {
+    const rows = (
+      await pool.query(
+        `SELECT id, title, description, content
+         FROM revision_materials
+         WHERE content_type='video' AND content IS NOT NULL
+         ORDER BY id DESC`,
+      )
+    ).rows;
+    res.json({ success: true, videos: rows });
+  } catch (error) {
+    console.error("TUITION VIDEOS ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ── STUDENT: change their dashboard theme colour ──
+export const setStudentTheme = async (req, res) => {
+  try {
+    const { theme_color } = req.body;
+    const student_id = req.user.id;
+    if (!theme_color || typeof theme_color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(theme_color.trim())) {
+      return res.status(400).json({ error: "A valid theme colour (hex) is required" });
+    }
+    await pool.query("UPDATE students SET theme_color=? WHERE id=?", [theme_color.trim(), student_id]);
+    res.json({ success: true, message: "Dashboard colour saved", theme_color: theme_color.trim() });
+  } catch (error) {
+    console.error("SET THEME ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // ── STUDENT DASHBOARD: revision materials + the past tests the student entered ──
 export const getStudentMaterials = async (req, res) => {
   try {
     const student_id = req.user.id;
-    const student = (await pool.query("SELECT grade FROM students WHERE id=?", [student_id])).rows[0];
+    const student = (await pool.query("SELECT grade, theme_color FROM students WHERE id=?", [student_id])).rows[0];
     const grade = student?.grade;
 
     let materials = [];
@@ -163,7 +200,7 @@ export const getStudentMaterials = async (req, res) => {
       )
     ).rows;
 
-    res.json({ success: true, grade, materials, pastTests });
+    res.json({ success: true, grade, materials, pastTests, theme: student?.theme_color || null });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -145,6 +145,7 @@ export default function MaterialsManager() {
                 <option value="link">Link (URL)</option>
                 <option value="file">File (URL / PDF link)</option>
                 <option value="text">Notes (typed below)</option>
+                <option value="video">YouTube video (streamed)</option>
               </select>
             </div>
           </div>
@@ -164,7 +165,9 @@ export default function MaterialsManager() {
                 ? "Notes content"
                 : contentType === "file"
                   ? "Upload a file (PDF / image / document)"
-                  : "Link / file URL"}
+                  : contentType === "video"
+                    ? "YouTube video URL or ID"
+                    : "Link / file URL"}
             </label>
             {contentType === "text" ? (
               <textarea rows={5} value={content} onChange={(e) => setContent(e.target.value)}
@@ -190,9 +193,16 @@ export default function MaterialsManager() {
                 )}
               </div>
             ) : (
-              <input value={content} onChange={(e) => setContent(e.target.value)}
-                placeholder={contentType === "file" ? "https://your-host/uploads/notes.pdf" : "https://example.com/resource"}
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+              <div>
+                <input value={content} onChange={(e) => setContent(e.target.value)}
+                  placeholder={contentType === "video" ? "e.g. https://www.youtube.com/watch?v=VIDEO_ID" : contentType === "file" ? "https://your-host/uploads/notes.pdf" : "https://example.com/resource"}
+                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                {contentType === "video" && content.trim() && (
+                  <p className="text-xs text-slate-400 mt-1.5">
+                    Students will stream this video right from YouTube on their dashboard.
+                  </p>
+                )}
+              </div>
             )}
           </div>
           <div className="flex gap-2">
@@ -232,7 +242,7 @@ export default function MaterialsManager() {
                     <p className="font-semibold text-slate-900">{m.title}</p>
                     <Badge variant="info">{m.grade}</Badge>
                     <Badge variant="default">
-                      {m.content_type === "link" ? "Link" : m.content_type === "file" ? "File" : "Notes"}
+                      {m.content_type === "link" ? "Link" : m.content_type === "file" ? "File" : m.content_type === "video" ? "Video" : "Notes"}
                     </Badge>
                   </div>
                   {m.description && <p className="text-sm text-slate-500 mt-0.5">{m.description}</p>}

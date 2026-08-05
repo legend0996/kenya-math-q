@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Menu, X, LayoutDashboard, LogIn, UserPlus, User } from "lucide-react";
 import Image from "./Image";
 
@@ -21,20 +21,41 @@ const readTokenUser = (): User | null => {
 const NAV_LINKS = [
   { href: "/#home",    label: "Home" },
   { href: "/#contest", label: "Contest" },
+  { href: "/tuition",   label: "Tuition" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/#contact", label: "Contact" },
 ];
+
+// Pages that should light up the "Contest" / dashboard area when visited.
+const DASHBOARD_PATHS = ["/dashboard", "/exam", "/contests", "/student-review", "/settings", "/support", "/parent-dashboard", "/school-dashboard"];
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(() => readTokenUser());
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const isActive = (href: string) => {
+    if (href === "/#home") return location.pathname === "/" && (!location.hash || location.hash === "#home");
+    if (href === "/#contest") return location.hash === "#contest" || DASHBOARD_PATHS.includes(location.pathname);
+    if (href === "/tuition") return location.pathname === "/tuition";
+    if (href === "/leaderboard") return location.pathname === "/leaderboard";
+    if (href === "/#contact") return location.hash === "#contact";
+    return false;
+  };
+
+  const linkClass = (href: string) =>
+    `px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+      isActive(href)
+        ? "text-blue-700 bg-blue-100 font-semibold ring-1 ring-blue-200"
+        : "text-slate-600 hover:text-blue-600 hover:bg-blue-50"
+    }`;
 
   const handleProfile = () => {
     if (!user) { window.location.href = "/login"; return; }
@@ -80,7 +101,7 @@ export default function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+              className={linkClass(link.href)}
             >
               {link.label}
             </a>
@@ -116,7 +137,11 @@ export default function Navbar() {
               </a>
               <button
                 onClick={handleProfile}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-all"
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                  DASHBOARD_PATHS.includes(location.pathname)
+                    ? "text-blue-700 bg-blue-100 font-semibold ring-1 ring-blue-200"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
               >
                 <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center">
                   <User size={13} className="text-white" />
@@ -155,7 +180,11 @@ export default function Navbar() {
               key={link.href}
               href={link.href}
               onClick={() => setMenuOpen(false)}
-              className="block px-3 py-2.5 text-sm font-medium text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+              className={`block px-3 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                isActive(link.href)
+                  ? "text-blue-700 bg-blue-100 font-semibold"
+                  : "text-slate-700 hover:text-blue-600 hover:bg-blue-50"
+              }`}
             >
               {link.label}
             </a>
@@ -183,7 +212,11 @@ export default function Navbar() {
                   Settings
                 </a>
                 <button onClick={() => { handleProfile(); setMenuOpen(false); }}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg">
+                  className={`flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium rounded-lg ${
+                    DASHBOARD_PATHS.includes(location.pathname)
+                      ? "text-blue-700 bg-blue-100 font-semibold"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}>
                   <LayoutDashboard size={15} /> Dashboard
                 </button>
                 <button onClick={() => { handleLogout(); setMenuOpen(false); }}
