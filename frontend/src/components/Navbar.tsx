@@ -21,8 +21,8 @@ const readTokenUser = (): User | null => {
 const NAV_LINKS = [
   { href: "/#home",    label: "Home" },
   { href: "/#contest", label: "Contest" },
-  { href: "/tuition",   label: "Tuition" },
   { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/tuition",   label: "Tuition" },
   { href: "/#contact", label: "Contact" },
 ];
 
