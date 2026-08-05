@@ -199,8 +199,23 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── TUITION ── */}
+      <section id="tuition" className="scroll-mt-20 py-20 px-4 bg-white">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-sm font-semibold text-blue-600 uppercase tracking-widest mb-3">Learn &amp; Revise</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Tuition Videos</h2>
+          <p className="text-slate-500 mb-8 leading-relaxed">
+            Watch free mathematics lessons, topic breakdowns and past-paper solutions
+            from our tutors to sharpen your skills before the contest.
+          </p>
+          <a href="/tuition">
+            <Button size="lg">Watch Lessons <ArrowRight size={18} /></Button>
+          </a>
+        </div>
+      </section>
+
       {/* ── CONTACT ── */}
-      <section id="contact" className="scroll-mt-20 py-20 px-4 bg-white">
+      <section id="contact" className="scroll-mt-20 py-20 px-4 bg-slate-50">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-10">
             <p className="text-sm font-semibold text-blue-600 uppercase tracking-widest mb-3">Get In Touch</p>
