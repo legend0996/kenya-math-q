@@ -4,6 +4,8 @@ import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
+import { Alert } from "../components/ui/Alert";
+import { Trophy, FlaskConical, CalendarClock } from "lucide-react";
 import { apiUrl, authHeaders } from "../utils/api";
 
 interface Contest {
@@ -88,34 +90,42 @@ export default function AvailableContests() {
   };
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="text-2xl font-bold mb-6">Available Contests</h1>
+    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 bg-primary text-white rounded-xl flex items-center justify-center">
+            <Trophy size={24} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Available Contests</h1>
+            <p className="text-sm text-muted">Register for a round or practise with a test contest</p>
+          </div>
+        </div>
+
         {feedback && (
-          <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${
-            feedback.type === "success"
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-              : "bg-red-50 border border-red-200 text-red-700"
-          }`}>
-            {feedback.msg}
+          <div className="mt-6">
+            <Alert variant={feedback.type}>{feedback.msg}</Alert>
           </div>
         )}
-        {loading ? <PageSpinner message="Loading contests..." /> : (
-          <div className="space-y-5">
+
+        {loading ? (
+          <div className="py-10"><PageSpinner message="Loading contests..." /></div>
+        ) : (
+          <div className="mt-8 space-y-5">
             {contests.length === 0 ? (
-              <Card><div className="text-center py-10 text-slate-400">No contests available.</div></Card>
+              <Card><div className="text-center py-10 text-muted">No contests available.</div></Card>
             ) : contests.map((c) => (
               <Card key={c.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <p className="font-bold text-lg text-slate-900 mb-1">{c.name}</p>
-                  <p className="text-sm text-slate-500 mb-1">{c.year || "—"}</p>
+                  <p className="font-bold text-lg text-foreground mb-1">{c.name}</p>
+                  <p className="text-sm text-muted mb-1">{c.year || "—"}</p>
                   <div className="flex items-center gap-2">
                     <Badge variant={c.status === "live" ? "success" : c.status === "upcoming" ? "info" : "default"}>
                       {(c.status || "ended").charAt(0).toUpperCase() + (c.status || "ended").slice(1)}
                     </Badge>
                     {c.start_time && (
-                      <span className="text-xs text-slate-400">
-                        {new Date(c.start_time).toLocaleString()}
+                      <span className="text-xs text-muted inline-flex items-center gap-1">
+                        <CalendarClock size={13} /> {new Date(c.start_time).toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -134,19 +144,24 @@ export default function AvailableContests() {
           </div>
         )}
 
-        <h2 className="text-xl font-bold text-slate-900 mt-10 mb-4">Practice / Test Contests</h2>
+        <div className="flex items-center gap-3 mt-12 mb-4">
+          <div className="w-10 h-10 bg-brandblue text-white rounded-xl flex items-center justify-center">
+            <FlaskConical size={20} />
+          </div>
+          <h2 className="text-xl font-bold text-foreground">Practice / Test Contests</h2>
+        </div>
         {tests.length === 0 ? (
-          <Card><div className="text-center py-8 text-slate-400">No test contests right now. Check back soon — admins can start one instantly.</div></Card>
+          <Card><div className="text-center py-8 text-muted">No test contests right now. Check back soon — admins can start one instantly.</div></Card>
         ) : (
           <div className="space-y-4">
             {tests.map((t) => (
               <Card key={t.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-dashed">
                 <div>
-                  <p className="font-bold text-slate-900 mb-1 inline-flex items-center gap-2">
+                  <p className="font-bold text-foreground mb-1 inline-flex items-center gap-2">
                     {t.name}
                     <Badge variant={t.open ? "success" : "default"}>{t.open ? "Open" : "Closed"}</Badge>
                   </p>
-                  <p className="text-xs text-slate-400">Instant practice, no payment needed</p>
+                  <p className="text-xs text-muted">Instant practice, no payment needed</p>
                 </div>
                 <div className="flex gap-2 items-center">
                   {t.open ? (

@@ -26,14 +26,14 @@ export default function WritingText({ value, onChange, height = 240, placeholder
   const addBlock = () => onChange([...blocks, ""]);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div className="rounded-xl border border-border bg-white overflow-hidden">
       <div className="flex flex-col">
         {blocks.length === 0 && (
           <textarea
             value=""
             placeholder={placeholder}
             onChange={(e) => update(0, e.target.value)}
-            className="w-full p-3 text-slate-800 outline-none resize-none bg-transparent"
+            className="w-full p-3 text-charcoal-500 outline-none resize-none bg-transparent"
             style={{ minHeight: Math.min(height, 360), height: height }}
           />
         )}
@@ -43,16 +43,16 @@ export default function WritingText({ value, onChange, height = 240, placeholder
             value={b}
             placeholder={i === 0 ? placeholder : "Continue…"}
             onChange={(e) => update(i, e.target.value)}
-            className="w-full p-3 text-slate-800 outline-none resize-none bg-transparent border-b border-slate-100 last:border-b-0"
+            className="w-full p-3 text-charcoal-500 outline-none resize-none bg-transparent border-b border-border last:border-b-0"
             style={{ minHeight: eachHeight }}
           />
         ))}
       </div>
-      <div className="px-3 py-2 border-t border-slate-100">
+      <div className="px-3 py-2 border-t border-border">
         <button
           type="button"
           onClick={addBlock}
-          className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg px-3 py-1.5 transition-colors"
+          className="text-xs font-semibold text-primary-dark hover:bg-pumpkin-spice-900/50 rounded-lg px-3 py-1.5 transition-colors"
         >
           + Add more writing space
         </button>

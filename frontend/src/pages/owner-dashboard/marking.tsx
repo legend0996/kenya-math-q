@@ -6,7 +6,7 @@ import { Card } from "../../components/ui/Card";
 import { Select } from "../../components/ui/Input";
 import AnnotationCanvas from "../../components/AnnotationCanvas";
 import WorkingView from "../../components/WorkingView";
-import { ClipboardCheck, Wand2 } from "lucide-react";
+import { ClipboardCheck, Wand2, CheckCircle2, AlertCircle } from "lucide-react";
 
 const GRADES = ["Grade 7", "Grade 8", "Grade 9", "Form 1", "Form 2", "Form 3", "Form 4"];
 
@@ -141,14 +141,14 @@ export default function Marking() {
   return (
     <div className="space-y-5">
       {msg && (
-        <div className={`px-4 py-3 rounded-xl text-sm font-medium ${msg.t === "ok" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
-          {msg.t === "ok" ? "✓ " : "⚠ "}{msg.m}
+        <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium ${msg.t === "ok" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+          {msg.t === "ok" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}{msg.m}
         </div>
       )}
 
       <Card>
         <h3 className="font-bold text-slate-900 mb-4 inline-flex items-center gap-2">
-          <ClipboardCheck size={16} className="text-blue-600" /> Mark &amp; Auto-percentage
+          <ClipboardCheck size={16} className="text-primary-dark" /> Mark &amp; Auto-percentage
         </h3>
         <div className="flex flex-col sm:flex-row gap-3 mb-3">
           <Select label="1. Pick a contest" value={contestId || ""} onChange={(e) => loadSubs(Number(e.target.value))}>
@@ -163,37 +163,37 @@ export default function Marking() {
         {contestId > 0 && (
           <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-3 rounded-xl">
             <div className="text-sm">
-              <span className="text-slate-500">Marking mode: </span>
+              <span className="text-muted">Marking mode: </span>
               <b className={contests.find((c) => c.id === contestId)?.marking_mode === "manual" ? "text-amber-600" : "text-emerald-700"}>
                 {contests.find((c) => c.id === contestId)?.marking_mode || "auto"}
               </b>
             </div>
             <button onClick={() => setMode("auto")}
-              className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-emerald-50 hover:text-emerald-700">Auto</button>
+              className="text-xs px-3 py-1.5 rounded-lg border border-border bg-white text-foreground hover:bg-emerald-50 hover:text-emerald-700">Auto</button>
             <button onClick={() => setMode("manual")}
-              className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-amber-50 hover:text-amber-700">Manual</button>
+              className="text-xs px-3 py-1.5 rounded-lg border border-border bg-white text-foreground hover:bg-amber-50 hover:text-amber-700">Manual</button>
             <div className="flex-1" />
             <button onClick={() => release(false)}
               className="text-xs px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Release papers</button>
             <button onClick={() => release(true)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100">Hide papers</button>
+              className="text-xs px-3 py-1.5 rounded-lg border border-border bg-white text-muted hover:bg-slate-100">Hide papers</button>
           </div>
         )}
 
         {contestId > 0 && (
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-violet-50 border border-violet-200 p-3 rounded-xl mt-3">
-            <Wand2 size={18} className="text-violet-600 shrink-0 hidden sm:block" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-primary-light border border-primary-light p-3 rounded-xl mt-3">
+            <Wand2 size={18} className="text-primary-dark shrink-0 hidden sm:block" />
             <div className="text-sm">
               <p className="font-semibold text-slate-800 flex items-center gap-1.5">
                 Auto-mark a whole grade
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted">
                 Pick a class, press Marks — the backend compares the admin&apos;s answer to each student&apos;s final answer and awards the marks.
               </p>
             </div>
             <div className="flex items-center gap-2 ml-auto">
               <select value={autoGrade} onChange={(e) => setAutoGrade(e.target.value)}
-                className="px-3 py-2 text-sm bg-white rounded-lg border border-slate-200 outline-none">
+                className="px-3 py-2 text-sm bg-white rounded-lg border border-border outline-none">
                 <option value="">Grade…</option>
                 {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
@@ -207,15 +207,15 @@ export default function Marking() {
         {ws && (
           <div className="flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-xl">
             <div>
-              <label className="text-xs font-medium text-slate-500 block mb-1">Total (CAT) marks</label>
+              <label className="text-xs font-medium text-muted block mb-1">Total (CAT) marks</label>
               <input type="number" value={catTotal} min={1} onChange={(e) => setCatTotal(Number(e.target.value))}
-                className="w-28 px-3 py-2 rounded-lg border border-slate-200 outline-none" />
+                className="w-28 px-3 py-2 rounded-lg border border-border outline-none" />
             </div>
             <div className="text-sm">
-              <span className="text-slate-500">Obtained: </span><b className="text-slate-800">{obtained}</b>
+              <span className="text-muted">Obtained: </span><b className="text-slate-800">{obtained}</b>
             </div>
             <div className="text-sm">
-              <span className="text-slate-500">Percentage: </span><b className="text-emerald-700">{pct}%</b>
+              <span className="text-muted">Percentage: </span><b className="text-emerald-700">{pct}%</b>
             </div>
             <div className="flex-1" />
             <Button loading={busy} onClick={save}>Save Marking</Button>
@@ -232,26 +232,26 @@ export default function Marking() {
                 <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
                   <p className="font-semibold text-slate-900">
                     Q{idx + 1}. {q.question}
-                    <span className="text-xs text-slate-400 ml-2">({maxQ} mark{maxQ === 1 ? "" : "s"})</span>
-                    {q.type === "construction" && <span className="text-xs ml-2 px-2 py-0.5 rounded-lg bg-violet-100 text-violet-700">Construction</span>}
+                    <span className="text-xs text-muted ml-2">({maxQ} mark{maxQ === 1 ? "" : "s"})</span>
+                    {q.type === "construction" && <span className="text-xs ml-2 px-2 py-0.5 rounded-lg bg-primary-light text-primary-dark">Construction</span>}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-slate-50 rounded-xl p-3">
-                    <p className="text-xs font-medium text-slate-500 mb-1">Student&apos;s answer</p>
+                    <p className="text-xs font-medium text-muted mb-1">Student&apos;s answer</p>
                     {q.student_answer ? (
                       <p className="text-sm text-slate-800 whitespace-pre-wrap">{q.student_answer}</p>
                     ) : (
                       <p className="text-sm text-slate-300 italic">No answer</p>
                     )}
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-slate-500 mb-1">Correct answer (reference)</p>
-                      <p className="text-xs text-slate-400">{q.correct_answer || "—"}</p>
+                      <p className="text-xs font-medium text-muted mb-1">Correct answer (reference)</p>
+                      <p className="text-xs text-muted">{q.correct_answer || "—"}</p>
                     </div>
                     {q.working ? (
                       <>
-                        <p className="text-xs font-medium text-slate-500 mt-3 mb-1">Student&apos;s working</p>
+                        <p className="text-xs font-medium text-muted mt-3 mb-1">Student&apos;s working</p>
                         <WorkingView value={q.working} label="Writing" />
                       </>
                     ) : (
@@ -260,7 +260,7 @@ export default function Marking() {
                   </div>
 
                   <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1">Mark with red pen / tick / cross</p>
+                    <p className="text-xs font-medium text-muted mb-1">Mark with red pen / tick / cross</p>
                     <AnnotationCanvas
                       imageUrl={typeof q.working === "string" ? q.working : undefined}
                       value={annotations[q.question_id] || q.annotation || null}
@@ -271,7 +271,7 @@ export default function Marking() {
                 </div>
 
                 <div className="mt-3 flex items-center gap-3">
-                  <label className="text-sm font-medium text-slate-600">
+                  <label className="text-sm font-medium text-foreground">
                     Marks (out of {maxQ}):
                   </label>
                   <input
@@ -281,9 +281,9 @@ export default function Marking() {
                     step={0.5}
                     value={marks[q.question_id] ?? ""}
                     onChange={(e) => setMarks((p) => ({ ...p, [q.question_id]: Number(e.target.value) }))}
-                    className="w-20 px-3 py-1.5 rounded-lg border border-slate-200 outline-none"
+                    className="w-20 px-3 py-1.5 rounded-lg border border-border outline-none"
                   />
-                  <span className="text-xs text-slate-400">weight: {maxQ}</span>
+                  <span className="text-xs text-muted">weight: {maxQ}</span>
                 </div>
               </Card>
             );
@@ -291,8 +291,8 @@ export default function Marking() {
 
           <Card className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-slate-600">Total: <b>{obtained}</b> / <b>{denom}</b></p>
-              <p className="text-sm text-slate-600">Percentage: <b className="text-emerald-700">{pct}%</b> (auto)</p>
+              <p className="text-sm text-foreground">Total: <b>{obtained}</b> / <b>{denom}</b></p>
+              <p className="text-sm text-foreground">Percentage: <b className="text-emerald-700">{pct}%</b> (auto)</p>
             </div>
             <Button loading={busy} onClick={save}>Save Marking</Button>
           </Card>

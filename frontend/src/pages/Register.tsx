@@ -1,8 +1,11 @@
 
 import { useState } from "react";
-import { UserPlus, GraduationCap, School, Users, Eye, EyeOff } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { UserPlus, GraduationCap, School, Users, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import Image from "../components/Image";
 import { Button } from "../components/ui/Button";
+import { Input, Select } from "../components/ui/Input";
+import { Alert } from "../components/ui/Alert";
 import { apiUrl } from "../utils/api";
 
 const GRADES = ["Grade 7", "Grade 8", "Grade 9", "Form 1", "Form 2", "Form 3", "Form 4"];
@@ -12,7 +15,11 @@ const COUNTIES = [
 ];
 
 export default function Register() {
-  const [type, setType]       = useState<"student" | "school" | "parent">("student");
+  const [params] = useSearchParams();
+  const role = params.get("role");
+  const initialType = role === "school" ? "school" : role === "parent" ? "parent" : "student";
+
+  const [type, setType]       = useState<"student" | "school" | "parent">(initialType);
   const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
@@ -25,7 +32,6 @@ export default function Register() {
 
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     let v = e.target.value;
-    // Names / school / county in CAPITALS; email always lowercase; password untouched
     if (key === "email") v = v.toLowerCase();
     else if (key !== "password") v = v.toUpperCase();
     setForm({ ...form, [key]: v });
@@ -66,26 +72,24 @@ export default function Register() {
   };
 
   return (
-    <main className="pt-16 min-h-screen bg-linear-to-br from-slate-50 to-blue-50 flex items-center justify-center px-4 py-12">
+    <main className="pt-[104px] min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
 
-        {/* Logo */}
         <div className="text-center mb-8">
           <Image
             src="/logo.jpeg"
             alt="Kenya Math Quest"
             width={80}
             height={80}
-            className="rounded-full mx-auto mb-4 shadow-lg"
+            className="rounded-full mx-auto mb-4 shadow-lifted"
           />
-          <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
-          <p className="text-slate-500 text-sm mt-1">Join Kenya Math Quest today</p>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Create Account</h1>
+          <p className="text-muted text-sm mt-1">Join Kenya Math Quest today</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+        <div className="bg-white rounded-2xl shadow-card border border-border p-8">
 
-          {/* Type toggle */}
-          <div className="flex bg-slate-100 rounded-xl p-1 mb-6">
+          <div className="flex bg-ghost-white-500 rounded-xl p-1 border border-border mb-6" role="tablist" aria-label="Account type">
             {[
               { key: "student", label: "Student",  Icon: GraduationCap },
               { key: "school",  label: "School",   Icon: School },
@@ -94,11 +98,13 @@ export default function Register() {
               <button
                 key={key}
                 type="button"
+                role="tab"
+                aria-selected={type === key}
                 onClick={() => { setType(key as "student" | "school" | "parent"); setError(""); setSuccess(""); }}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   type === key
-                    ? "bg-white text-blue-700 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white text-primary-dark shadow-soft border border-border"
+                    : "text-muted hover:text-foreground"
                 }`}
               >
                 <Icon size={15} /> {label}
@@ -106,110 +112,85 @@ export default function Register() {
             ))}
           </div>
 
-          {/* Alerts */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-5 flex items-start gap-2">
-              <span className="mt-0.5">⚠</span> {error}
-            </div>
-          )}
+          {error && <Alert variant="error" className="mb-5">{error}</Alert>}
           {success && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-xl mb-5 flex items-start gap-2">
-              <span className="mt-0.5">✓</span> {success}
-            </div>
+            <Alert variant="success" className="mb-5">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="shrink-0 text-emerald-600" /> {success}
+              </div>
+            </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {type === "student" && (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
-                  <input placeholder="John Kamau" required value={form.full_name} onChange={set("full_name")}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">School Name</label>
-                  <input placeholder="Nairobi Academy" required value={form.school} onChange={set("school")}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Grade / Form</label>
-                  <select required value={form.grade} onChange={set("grade")}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all">
-                    <option value="">Select grade…</option>
-                    {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
+                <Input label="Full Name" placeholder="John Kamau" required value={form.full_name} onChange={set("full_name")} />
+                <Input label="School Name" placeholder="Nairobi Academy" required value={form.school} onChange={set("school")} />
+                <Select label="Grade / Form" required value={form.grade} onChange={set("grade")}>
+                  <option value="">Select grade…</option>
+                  {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
+                </Select>
               </>
             )}
 
             {type === "school" && (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">School Name</label>
-                  <input placeholder="Nairobi Academy" required value={form.name} onChange={set("name")}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">County</label>
-                  <select required value={form.county} onChange={set("county")}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all">
-                    <option value="">Select county…</option>
-                    {COUNTIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
+                <Input label="School Name" placeholder="Nairobi Academy" required value={form.name} onChange={set("name")} />
+                <Select label="County" required value={form.county} onChange={set("county")}>
+                  <option value="">Select county…</option>
+                  {COUNTIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </Select>
               </>
             )}
 
             {type === "parent" && (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
-                  <input placeholder="John Kamau" required value={form.full_name} onChange={set("full_name")}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Phone Number
-                    <span className="text-slate-400 font-normal"> (use the number recorded for your child)</span>
-                  </label>
-                  <input type="tel" placeholder="07XX XXX XXX" required value={form.phone} onChange={set("phone")}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-                </div>
+                <Input label="Full Name" placeholder="John Kamau" required value={form.full_name} onChange={set("full_name")} />
+                <Input
+                  label="Phone Number"
+                  hint="Use the number recorded for your child"
+                  type="tel"
+                  placeholder="07XX XXX XXX"
+                  required
+                  value={form.phone}
+                  onChange={set("phone")}
+                />
               </>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
-              <input type="email" placeholder="your@email.com" required value={form.email} onChange={set("email")}
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-            </div>
+            <Input
+              label="Email Address"
+              type="email"
+              placeholder="your@email.com"
+              required
+              value={form.email}
+              onChange={set("email")}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  type={showPw ? "text" : "password"}
-                  placeholder="Minimum 8 characters"
-                  required minLength={8}
-                  value={form.password}
-                  onChange={set("password")}
-                  className="w-full px-4 py-2.5 pr-11 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                />
+            <Input
+              label="Password"
+              type={showPw ? "text" : "password"}
+              placeholder="Minimum 8 characters"
+              required
+              minLength={8}
+              value={form.password}
+              onChange={set("password")}
+              rightSlot={
                 <button type="button" onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  className="text-slate-400 hover:text-foreground p-1">
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
-              </div>
-            </div>
+              }
+            />
 
             <Button type="submit" fullWidth size="lg" loading={loading} icon={<UserPlus size={16} />}>
               Create Account
             </Button>
           </form>
 
-          <p className="text-center text-sm text-slate-500 mt-6">
+          <p className="text-center text-sm text-muted mt-6">
             Already have an account?{" "}
-            <a href="/login" className="text-blue-600 font-semibold hover:underline">
+            <a href="/login" className="text-primary-dark font-semibold hover:underline">
               Sign in
             </a>
           </p>

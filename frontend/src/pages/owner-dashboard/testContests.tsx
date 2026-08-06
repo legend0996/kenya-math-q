@@ -4,7 +4,7 @@ import { apiUrl, authHeaders } from "../../utils/api";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
-import { Play, Plus } from "lucide-react";
+import { Play, Plus, CheckCircle2, AlertCircle } from "lucide-react";
 
 const GRADES = ["Grade 7", "Grade 8", "Grade 9", "Form 1", "Form 2", "Form 3", "Form 4"];
 
@@ -78,8 +78,8 @@ export default function TestContests() {
   return (
     <div className="space-y-6">
       {msg && (
-        <div className={`px-4 py-3 rounded-xl text-sm font-medium ${msg.t === "ok" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
-          {msg.t === "ok" ? "✓ " : "⚠ "}{msg.m}
+        <div className={`px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2 ${msg.t === "ok" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+          {msg.t === "ok" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}{msg.m}
         </div>
       )}
 
@@ -87,18 +87,18 @@ export default function TestContests() {
         <h3 className="font-bold text-slate-900 mb-4">Create a Test Contest</h3>
         <div className="flex flex-col sm:flex-row gap-3">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Test name (e.g. Grade 7 Practice)"
-            className="flex-1 px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
+            className="flex-1 px-3.5 py-2.5 text-sm rounded-xl border border-border focus:border-primary-dark outline-none" />
           <input type="number" min={1} value={minutes} onChange={(e) => setMinutes(Number(e.target.value))}
-            className="w-28 px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
+            className="w-28 px-3.5 py-2.5 text-sm rounded-xl border border-border focus:border-primary-dark outline-none" />
           <Button loading={busy === "create"} icon={<Plus size={15} />} onClick={() => act("create")}>
             Create
           </Button>
         </div>
-        <p className="text-xs text-slate-400 mt-2">Default minutes per grade. Add questions per grade below after creating.</p>
+        <p className="text-xs text-muted mt-2">Default minutes per grade. Add questions per grade below after creating.</p>
       </Card>
 
       <div className="space-y-3">
-        {tests.length === 0 && <Card><div className="text-center py-8 text-slate-400">No test contests yet.</div></Card>}
+        {tests.length === 0 && <Card><div className="text-center py-8 text-muted">No test contests yet.</div></Card>}
         {tests.map((t) => {
           const open = !!t.test_open;
           return (
@@ -107,7 +107,7 @@ export default function TestContests() {
                 <p className="font-bold text-slate-900 inline-flex items-center gap-2">
                   {t.name} <Badge variant={open ? "success" : "default"}>{open ? "Open" : "Stopped"}</Badge>
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   {open && t.started_at ? `Live since ${new Date(t.started_at).toLocaleString()}` : "Not running"}
                 </p>
               </div>
@@ -132,18 +132,18 @@ export default function TestContests() {
         <form onSubmit={addQuestion} className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <select value={qTest} onChange={(e) => setQTest(Number(e.target.value))}
-              className="flex-1 px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 outline-none">
+              className="flex-1 px-3.5 py-2.5 text-sm rounded-xl border border-border outline-none">
               <option value={0}>Select a test contest…</option>
               {tests.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
             <select value={qGrade} onChange={(e) => setQGrade(e.target.value)}
-              className="w-36 px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 outline-none">
+              className="w-36 px-3.5 py-2.5 text-sm rounded-xl border border-border outline-none">
               {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
           <textarea value={q} onChange={(e) => setQ(e.target.value)} rows={3}
             placeholder="Enter the question text (theory). For multiple choice, add via the Questions tab with the test contest id."
-            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:border-blue-500 outline-none resize-none" />
+            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-border focus:border-primary-dark outline-none resize-none" />
           <Button type="submit" disabled={!qTest || !q.trim()} icon={<Plus size={15} />}>Add Question</Button>
         </form>
       </Card>

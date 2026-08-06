@@ -1,8 +1,11 @@
 
 import { useState } from "react";
 import { apiUrl } from "../utils/api";
-import { KeyRound, MessageSquareText } from "lucide-react";
+import { KeyRound, Eye, EyeOff, CheckCircle2, ArrowLeft } from "lucide-react";
+import Image from "../components/Image";
 import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Alert } from "../components/ui/Alert";
 
 type Stage = "email" | "code" | "done";
 
@@ -12,6 +15,7 @@ export default function ForgotPassword() {
   const [code, setCode]       = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
   const [notice, setNotice]   = useState("");
@@ -66,31 +70,37 @@ export default function ForgotPassword() {
   };
 
   return (
-    <main className="pt-16 min-h-screen bg-linear-to-br from-slate-50 to-blue-50 flex items-center justify-center px-4 py-12">
+    <main className="pt-[104px] min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-          <h1 className="text-xl font-bold text-slate-900 mb-1 inline-flex items-center gap-2">
-            <KeyRound size={20} className="text-blue-600" /> Reset Password
+        <div className="text-center mb-8">
+          <Image
+            src="/logo.jpeg"
+            alt="Kenya Math Quest"
+            width={80}
+            height={80}
+            className="rounded-full mx-auto mb-4 shadow-lifted"
+          />
+          <h1 className="text-2xl font-bold text-foreground inline-flex items-center gap-2 justify-center tracking-tight">
+            <KeyRound size={22} className="text-primary-dark" /> Reset Password
           </h1>
-          <p className="text-sm text-slate-500 mb-6">We&apos;ll email you a code that expires in 15 minutes.</p>
+          <p className="text-sm text-muted mt-1">We&apos;ll email you a code that expires in 15 minutes.</p>
+        </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-5">⚠ {error}</div>
-          )}
+        <div className="bg-white rounded-2xl shadow-card border border-border p-8">
+          {error && <Alert variant="error" className="mb-5">{error}</Alert>}
+          {notice && <Alert variant="info" className="mb-5">{notice}</Alert>}
 
           {stage === "email" && (
             <form onSubmit={requestReset} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Account Email</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@email.com"
-                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                />
-              </div>
+              <Input
+                label="Account Email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@email.com"
+                icon={<KeyRound size={16} />}
+              />
               <Button type="submit" fullWidth size="lg" loading={loading} icon={<KeyRound size={16} />}>
                 Send Reset Code
               </Button>
@@ -98,57 +108,53 @@ export default function ForgotPassword() {
           )}
 
           {stage === "code" && (
-            <div className="space-y-4">
-              {notice && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm px-4 py-3 rounded-xl flex items-start gap-2">
-                  <MessageSquareText size={15} className="mt-0.5 shrink-0" /> {notice}
-                </div>
-              )}
-              <form onSubmit={reset} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Reset Code</label>
-                  <input
-                    type="text"
-                    required
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="6-digit code"
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">New Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  />
-                </div>
-                <Button type="submit" fullWidth size="lg" loading={loading} icon={<KeyRound size={16} />}>
-                  Reset Password
-                </Button>
-              </form>
-            </div>
+            <form onSubmit={reset} className="space-y-4">
+              <Input
+                label="Reset Code"
+                type="text"
+                required
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="6-digit code"
+              />
+              <Input
+                label="New Password"
+                type={showPw ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                rightSlot={
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="text-slate-400 hover:text-foreground p-1">
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                }
+              />
+              <Input
+                label="Confirm Password"
+                type={showPw ? "text" : "password"}
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="••••••••"
+                rightSlot={
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="text-slate-400 hover:text-foreground p-1">
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                }
+              />
+              <Button type="submit" fullWidth size="lg" loading={loading} icon={<KeyRound size={16} />}>
+                Reset Password
+              </Button>
+            </form>
           )}
 
           {stage === "done" && (
             <div className="text-center py-4 space-y-4">
-              <div className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                Password updated! You can now log in.
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center justify-center gap-2 text-sm text-emerald-700">
+                <CheckCircle2 size={16} className="shrink-0" /> Password updated! You can now log in.
               </div>
               <a href="/login">
                 <Button fullWidth size="lg">Go to Login</Button>
@@ -156,9 +162,10 @@ export default function ForgotPassword() {
             </div>
           )}
 
-          <p className="text-center text-sm text-slate-500 mt-6">
-            Remembered it? <a href="/login" className="text-blue-600 font-semibold hover:underline">Go back to login</a>
-          </p>
+          <a href="/login"
+            className="mt-6 inline-flex items-center justify-center gap-1.5 w-full text-sm text-muted hover:text-primary-dark font-medium transition-colors">
+            <ArrowLeft size={14} /> Remembered it? Go back to login
+          </a>
         </div>
       </div>
     </main>

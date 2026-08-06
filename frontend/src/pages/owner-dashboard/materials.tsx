@@ -126,22 +126,22 @@ export default function MaterialsManager() {
         <h2 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
           <BookOpen size={18} className="text-emerald-600" /> {editId ? "Edit" : "Add"} Revision Material
         </h2>
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-muted mb-4">
           Students see these on their dashboard under &quot;Study Materials&quot;, filtered by their class/form.
         </p>
         <form onSubmit={save} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Grade / Form</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Grade / Form</label>
               <select value={grade} onChange={(e) => setGrade(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all">
                 {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Type</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Type</label>
               <select value={contentType} onChange={(e) => setContentType(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all">
                 <option value="link">Link (URL)</option>
                 <option value="file">File (URL / PDF link)</option>
                 <option value="text">Notes (typed below)</option>
@@ -150,17 +150,17 @@ export default function MaterialsManager() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Title</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Title</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Form 2 — Algebra revision notes"
-              className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+              className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Description (optional)</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Description (optional)</label>
             <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short summary"
-              className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+              className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-foreground mb-1.5">
               {contentType === "text"
                 ? "Notes content"
                 : contentType === "file"
@@ -172,13 +172,13 @@ export default function MaterialsManager() {
             {contentType === "text" ? (
               <textarea rows={5} value={content} onChange={(e) => setContent(e.target.value)}
                 placeholder="Type the study notes here…"
-                className="w-full px-4 py-3 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none" />
+                className="w-full px-4 py-3 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all resize-none" />
             ) : contentType === "file" ? (
               <div className="flex flex-col sm:flex-row gap-3">
-                <label className="flex-1 flex items-center gap-3 px-4 py-3 text-sm bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-blue-400 transition-colors">
-                  <Upload size={16} className="text-blue-500 shrink-0" />
-                  <span className={content ? "text-slate-700 font-medium" : "text-slate-400"}>
-                    {content ? `Uploaded ✓ ${content}` : uploading ? "Uploading…" : "Choose a file from your computer"}
+                <label className="flex-1 flex items-center gap-3 px-4 py-3 text-sm bg-surface border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary-dark transition-colors">
+                  <Upload size={16} className="text-primary shrink-0" />
+                  <span className="flex items-center gap-1.5">
+                    {content ? <><CheckCircle2 size={14} className="text-emerald-600 shrink-0" /><span className="truncate">{content}</span></> : <>{uploading ? "Uploading…" : "Choose a file from your computer"}</>}
                   </span>
                   <input
                     ref={fileRef}
@@ -196,9 +196,9 @@ export default function MaterialsManager() {
               <div>
                 <input value={content} onChange={(e) => setContent(e.target.value)}
                   placeholder={contentType === "video" ? "e.g. https://www.youtube.com/watch?v=VIDEO_ID" : contentType === "file" ? "https://your-host/uploads/notes.pdf" : "https://example.com/resource"}
-                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
                 {contentType === "video" && content.trim() && (
-                  <p className="text-xs text-slate-400 mt-1.5">
+                  <p className="text-xs text-muted mt-1.5">
                     Students will stream this video right from YouTube on their dashboard.
                   </p>
                 )}
@@ -229,14 +229,14 @@ export default function MaterialsManager() {
           <Badge variant="default">{materials.length} total</Badge>
         </div>
         {materials.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">
+          <div className="text-center py-12 text-muted">
             <BookOpen size={32} className="mx-auto mb-2 opacity-30" />
             <p>No revision materials yet</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
             {materials.map((m) => (
-              <div key={m.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50">
+              <div key={m.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-slate-900">{m.title}</p>
@@ -245,13 +245,13 @@ export default function MaterialsManager() {
                       {m.content_type === "link" ? "Link" : m.content_type === "file" ? "File" : m.content_type === "video" ? "Video" : "Notes"}
                     </Badge>
                   </div>
-                  {m.description && <p className="text-sm text-slate-500 mt-0.5">{m.description}</p>}
+                  {m.description && <p className="text-sm text-muted mt-0.5">{m.description}</p>}
                   {m.content_type === "text" && m.content && (
-                    <p className="text-xs text-slate-500 mt-1 bg-slate-50 rounded-lg p-2 whitespace-pre-wrap line-clamp-2">{m.content}</p>
+                    <p className="text-xs text-muted mt-1 bg-surface rounded-lg p-2 whitespace-pre-wrap line-clamp-2">{m.content}</p>
                   )}
                   {m.content_type !== "text" && m.content && (
                     <a href={m.content} target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-blue-600 font-semibold inline-flex items-center gap-1 mt-1">
+                      className="text-xs text-primary-dark font-semibold inline-flex items-center gap-1 mt-1">
                       {m.content_type === "link" ? "Open link" : "View file"} <ExternalLink size={12} />
                     </a>
                   )}

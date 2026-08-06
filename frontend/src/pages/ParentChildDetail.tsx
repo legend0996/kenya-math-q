@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
   ArrowLeft, GraduationCap, School, Trophy, Award,
-  Calendar, Download, AlertCircle, User, Phone, MapPin,
+  Calendar, Download, User, Phone, MapPin,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
+import { Alert } from "../components/ui/Alert";
 import { apiUrl, authHeaders, downloadAuthorized, getUser } from "../utils/api";
 
 type HistoryRow = {
@@ -100,24 +101,23 @@ export default function ParentChildDetail() {
   };
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50">
+    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
 
-        {/* Header */}
         <div className="mb-8">
           <button onClick={() => navigate("/parent-dashboard")}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 mb-4">
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-dark hover:text-primary mb-4">
             <ArrowLeft size={15} /> Back to parent dashboard
           </button>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-700 text-2xl font-bold flex items-center justify-center shrink-0">
+              <div className="w-14 h-14 rounded-full bg-primary-light text-primary-dark text-2xl font-bold flex items-center justify-center shrink-0">
                 {student?.full_name?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{student?.full_name}</h1>
-                <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-bold text-foreground">{student?.full_name}</h1>
+                <p className="text-sm text-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
                   <GraduationCap size={13} /> {student?.grade || "—"}
                   <School size={13} className="ml-2" /> {student?.school || "No school"}
                 </p>
@@ -128,49 +128,47 @@ export default function ParentChildDetail() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
-            <AlertCircle size={16} /> {error}
+          <div className="mb-6">
+            <Alert variant="error">{error}</Alert>
           </div>
         )}
 
         {!error && student && (
           <>
-            {/* Account info */}
             <Card className="mb-8">
-              <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <User size={18} className="text-blue-600" /> Account
+              <h2 className="font-bold text-foreground mb-4 flex items-center gap-2">
+                <User size={18} className="text-primary-dark" /> Account
               </h2>
               <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2 text-slate-600">
-                  <User size={14} className="text-slate-400" />
-                  <span className="text-slate-500">Email:</span> {student.email || "—"}
+                <div className="flex items-center gap-2 text-charcoal-700">
+                  <User size={14} className="text-charcoal-400" />
+                  <span className="text-muted">Email:</span> {student.email || "—"}
                 </div>
                 {student.county && (
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <MapPin size={14} className="text-slate-400" />
-                    <span className="text-slate-500">County:</span> {student.county}
+                  <div className="flex items-center gap-2 text-charcoal-700">
+                    <MapPin size={14} className="text-charcoal-400" />
+                    <span className="text-muted">County:</span> {student.county}
                   </div>
                 )}
                 {student.student_phone && (
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Phone size={14} className="text-slate-400" />
-                    <span className="text-slate-500">Student phone:</span> {student.student_phone}
+                  <div className="flex items-center gap-2 text-charcoal-700">
+                    <Phone size={14} className="text-charcoal-400" />
+                    <span className="text-muted">Student phone:</span> {student.student_phone}
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-slate-600">
-                  <Calendar size={14} className="text-slate-400" />
-                  <span className="text-slate-500">Joined:</span>{" "}
+                <div className="flex items-center gap-2 text-charcoal-700">
+                  <Calendar size={14} className="text-charcoal-400" />
+                  <span className="text-muted">Joined:</span>{" "}
                   {student.created_at ? new Date(student.created_at).toLocaleDateString() : "—"}
                 </div>
               </div>
             </Card>
 
-            {/* Current contest */}
-            <Card className="mb-8 border-l-4 border-l-blue-500">
+            <Card className="mb-8 border-l-4 border-l-primary-dark">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm text-slate-500">Current contest</p>
-                  <h3 className="font-bold text-slate-900">{contest ? contest.name : "No contest published yet"}</h3>
+                  <p className="text-sm text-muted">Current contest</p>
+                  <h3 className="font-bold text-foreground">{contest ? contest.name : "No contest published yet"}</h3>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   {!registered && <Badge variant="default">Not registered</Badge>}
@@ -188,41 +186,40 @@ export default function ParentChildDetail() {
               </div>
             </Card>
 
-            {/* Contest history */}
             <section className="mb-8">
-              <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Trophy size={20} className="text-violet-600" /> Contest History
+              <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                <Trophy size={20} className="text-brandblue-dark" /> Contest History
               </h2>
               {history.length === 0 ? (
                 <Card className="text-center py-10">
-                  <Trophy size={36} className="text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-500 font-medium">No completed contests yet</p>
-                  <p className="text-sm text-slate-400 mt-1">Results appear here once the child completes a contest</p>
+                  <Trophy size={36} className="text-charcoal-200 mx-auto mb-3" />
+                  <p className="text-muted font-medium">No completed contests yet</p>
+                  <p className="text-sm text-muted mt-1">Results appear here once the child completes a contest</p>
                 </Card>
               ) : (
                 <Card padding="none">
-                  <div className="divide-y divide-slate-50">
+                  <div className="divide-y divide-border">
                     {history.map((h) => (
-                      <div key={h.id} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
+                      <div key={h.id} className="px-6 py-4 flex items-center gap-4 hover:bg-surface transition-colors">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                          h.result_grade === "Distinction" ? "bg-amber-50 text-amber-600"
+                          h.result_grade === "Distinction" ? "bg-accent text-primary-darker"
                           : h.result_grade === "Merit" ? "bg-emerald-50 text-emerald-600"
-                          : "bg-slate-100 text-slate-500"
+                          : "bg-surface text-muted"
                         }`}>
                           <Trophy size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-semibold text-slate-900 truncate">{h.contest_name}</p>
+                            <p className="font-semibold text-foreground truncate">{h.contest_name}</p>
                             {h.is_test ? <Badge variant="info">Test</Badge> : null}
                             {h.timed_out ? <Badge variant="warning">Timed out</Badge> : null}
                           </div>
-                          <p className="text-xs text-slate-500 mt-0.5">
+                          <p className="text-xs text-muted mt-0.5">
                             {h.start_time ? new Date(h.start_time).toDateString() : (h.year || "—")}
                           </p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="font-bold text-slate-900 text-sm">
+                          <p className="font-bold text-foreground text-sm">
                             {h.score ?? "—"} pts
                             {h.percentage != null ? ` · ${h.percentage}%` : ""}
                           </p>
@@ -235,16 +232,15 @@ export default function ParentChildDetail() {
               )}
             </section>
 
-            {/* Certificates */}
             <section>
-              <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
                 <Award size={20} className="text-amber-500" /> Certificates
               </h2>
               {certificates.length === 0 ? (
                 <Card className="text-center py-10">
-                  <Award size={36} className="text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-500 font-medium">No certificates yet</p>
-                  <p className="text-sm text-slate-400 mt-1">Certificates appear here once issued by the organizers</p>
+                  <Award size={36} className="text-charcoal-200 mx-auto mb-3" />
+                  <p className="text-muted font-medium">No certificates yet</p>
+                  <p className="text-sm text-muted mt-1">Certificates appear here once issued by the organizers</p>
                 </Card>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -252,12 +248,12 @@ export default function ParentChildDetail() {
                     <Card key={c.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-slate-900">{c.contest_name || "Certificate"}</h3>
+                          <h3 className="font-bold text-foreground">{c.contest_name || "Certificate"}</h3>
                           {c.source === "manual"
                             ? <Badge variant="info">Manual</Badge>
                             : c.grade ? <Badge variant="success">{c.grade}</Badge> : <Badge variant="default">Issued</Badge>}
                         </div>
-                        <p className="text-sm text-slate-500 mt-1">
+                        <p className="text-sm text-muted mt-1">
                           {c.grade && c.score != null ? `Score: ${c.score} · ${c.grade} · ` : ""}
                           {new Date(c.created_at).toLocaleDateString()}
                         </p>

@@ -112,12 +112,12 @@ export default function WorkingCanvas({ value, onChange, height = 240 }: Props) 
     { k: "pen", icon: <Pen size={13} /> },
     { k: "pencil", icon: <Pencil size={13} /> },
     { k: "redPen", icon: <span className="inline-block w-3.5 h-3.5 rounded-full bg-red-600" /> },
-    { k: "eraser", icon: <span className="inline-block w-3.5 h-3.5 rounded bg-slate-200 border border-slate-400" /> },
+    { k: "eraser", icon: <span className="inline-block w-3.5 h-3.5 rounded bg-slate-200 border border-border-dark" /> },
   ];
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-      <div className="flex items-center gap-1.5 p-1.5 bg-slate-50 border-b border-slate-200 flex-wrap">
+    <div className="border border-border rounded-xl overflow-hidden bg-white">
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-50 border-b border-border flex-wrap">
         {tools.map((t) => (
           <button
             key={t.k}
@@ -125,7 +125,7 @@ export default function WorkingCanvas({ value, onChange, height = 240 }: Props) 
             title={TOOL_STYLES[t.k].label}
             onClick={() => setTool(t.k)}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
-              tool === t.k ? "bg-blue-600 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+              tool === t.k ? "bg-primary-light text-primary-dark border border-primary-dark" : "bg-white border border-border text-foreground hover:bg-slate-100"
             }`}
           >
             {t.icon}
@@ -133,10 +133,10 @@ export default function WorkingCanvas({ value, onChange, height = 240 }: Props) 
           </button>
         ))}
         <div className="flex-1" />
-        <button type="button" onClick={undo} className="px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 flex items-center gap-1">
+        <button type="button" onClick={undo} className="px-2.5 py-1.5 rounded-lg text-xs bg-white border border-border text-foreground hover:bg-slate-100 flex items-center gap-1">
           <Undo2 size={12} /> Undo
         </button>
-        <button type="button" onClick={clear} className="px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-red-500 hover:bg-red-50 flex items-center gap-1">
+        <button type="button" onClick={clear} className="px-2.5 py-1.5 rounded-lg text-xs bg-white border border-border text-red-500 hover:bg-red-50 flex items-center gap-1">
           <Trash2 size={12} /> Clear
         </button>
       </div>

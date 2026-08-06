@@ -232,11 +232,11 @@ export default function RegistrationsManager() {
       <Card>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <label className="text-sm font-semibold text-slate-700 whitespace-nowrap">Contest</label>
+            <label className="text-sm font-semibold text-foreground whitespace-nowrap">Contest</label>
             <select
               value={contestId ?? ""}
               onChange={(e) => setContestId(Number(e.target.value))}
-              className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+              className="px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
             >
               {contests.map((c) => (
                 <option key={c.id} value={c.id}>{c.name} ({c.year}){c.registration_open ? " — OPEN" : ""}</option>
@@ -244,12 +244,12 @@ export default function RegistrationsManager() {
             </select>
           </div>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <input
                 type="checkbox"
                 checked={autoPaid}
                 onChange={(e) => setAutoPaid(e.target.checked)}
-                className="w-4 h-4 accent-blue-600"
+                className="w-4 h-4 accent-primary-dark"
               />
               Auto-mark paid on register
             </label>
@@ -263,22 +263,22 @@ export default function RegistrationsManager() {
       <Card padding="none">
         <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="font-bold text-slate-900 flex items-center gap-2">
-            <Users size={18} className="text-slate-400" /> Students — {contest?.name ?? "…"}
+            <Users size={18} className="text-muted" /> Students — {contest?.name ?? "…"}
           </h2>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search name / school / email…"
-                className="pl-9 pr-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all w-56"
+                className="pl-9 pr-3 py-2 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all w-56"
               />
             </div>
             <select
               value={gradeFilter}
               onChange={(e) => setGradeFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+              className="px-3 py-2 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
             >
               <option value="all">All grades</option>
               {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -297,9 +297,9 @@ export default function RegistrationsManager() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-100">
+              <tr className="text-left text-xs uppercase tracking-wider text-muted border-b border-slate-100">
                 <th className="px-6 py-3 w-10">
-                  <input type="checkbox" checked={allChecked} onChange={toggleAll} className="w-4 h-4 accent-blue-600" />
+                  <input type="checkbox" checked={allChecked} onChange={toggleAll} className="w-4 h-4 accent-primary-dark" />
                 </th>
                 <th className="px-4 py-3">Student</th>
                 <th className="px-4 py-3">School</th>
@@ -314,7 +314,7 @@ export default function RegistrationsManager() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-14 text-center text-slate-400">No students found</td>
+                  <td colSpan={9} className="px-6 py-14 text-center text-muted">No students found</td>
                 </tr>
               ) : (
                 filtered.map((s) => (
@@ -324,18 +324,18 @@ export default function RegistrationsManager() {
                         type="checkbox"
                         checked={selected.has(s.id)}
                         onChange={() => toggleOne(s.id)}
-                        className="w-4 h-4 accent-blue-600"
+                        className="w-4 h-4 accent-primary-dark"
                       />
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-semibold text-slate-900">{s.full_name}</p>
-                      <p className="text-xs text-slate-400">{s.email}</p>
+                      <p className="text-xs text-muted">{s.email}</p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{s.school || "—"}</td>
+                    <td className="px-4 py-3 text-foreground">{s.school || "—"}</td>
                     <td className="px-4 py-3">
                       <Badge variant="default">{s.grade || "—"}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{s.county || "—"}</td>
+                    <td className="px-4 py-3 text-foreground">{s.county || "—"}</td>
                     <td className="px-4 py-3 text-center">
                       {s.registered
                         ? <Badge variant="success" dot>Registered</Badge>
@@ -351,7 +351,7 @@ export default function RegistrationsManager() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       {s.registered && s.paid ? (
-                        <span className="text-xs text-slate-400 font-medium">All done</span>
+                        <span className="text-xs text-muted font-medium">All done</span>
                       ) : (
                         <Button
                           size="sm"
@@ -370,16 +370,16 @@ export default function RegistrationsManager() {
             </tbody>
           </table>
         </div>
-        <div className="px-6 py-3 text-xs text-slate-400">
+        <div className="px-6 py-3 text-xs text-muted">
           {selected.size} selected · {filtered.length} shown · {students.length} total students
         </div>
       </Card>
 
       {confirmAll && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal-900/40">
+          <div className="bg-white rounded-2xl shadow-overlay p-8 max-w-md w-full">
             <h3 className="font-bold text-lg mb-2">Register all students?</h3>
-            <p className="mb-4 text-slate-600">
+            <p className="mb-4 text-foreground">
               Register <span className="font-semibold">{students.length}</span> students for{" "}
               <span className="font-semibold">{contest?.name}</span>?
               {autoPaid ? " They will also be marked as paid." : ""}

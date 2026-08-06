@@ -139,13 +139,13 @@ export default function QuestionsManager() {
       <Card>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="font-bold text-slate-900 flex items-center gap-2">
-            {editId != null ? <Pencil size={18} className="text-blue-600" /> : <Plus size={18} className="text-blue-600" />}
+            {editId != null ? <Pencil size={18} className="text-primary-dark" /> : <Plus size={18} className="text-primary-dark" />}
             {editId != null ? "Edit Question" : "Add Question"}
           </h2>
           <select
             value={contestId ?? ""}
             onChange={(e) => setContestId(Number(e.target.value))}
-            className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+            className="px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
           >
             {contests.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -154,16 +154,16 @@ export default function QuestionsManager() {
         <form onSubmit={save} className="mt-5 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Grade / Form</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Grade / Form</label>
               <select value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })}
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all">
                 {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Question Type</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Question Type</label>
               <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all">
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all">
                 <option value="mcq">Multiple Choice (MCQ)</option>
                 <option value="theory">Theory / Open-ended</option>
                 <option value="construction">Construction / Compass &amp; Ruler</option>
@@ -171,37 +171,37 @@ export default function QuestionsManager() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Question Text</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Question Text</label>
             <textarea rows={2} value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })}
               placeholder="Enter the question…"
-              className="w-full px-4 py-3 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none" />
+              className="w-full px-4 py-3 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all resize-none" />
           </div>
           {form.type === "mcq" && (
             <div className="grid sm:grid-cols-2 gap-3">
               {(["option_a", "option_b", "option_c", "option_d"] as const).map((k) => (
                 <div key={k}>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{k.replace("option_", "Option ").toUpperCase()}</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">{k.replace("option_", "Option ").toUpperCase()}</label>
                   <input value={form[k] as string} onChange={(e) => setForm({ ...form, [k]: e.target.value })} placeholder={k.replace("option_", "Option ").toUpperCase()}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
                 </div>
               ))}
             </div>
           )}
           <div className="grid sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Correct Answer</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Correct Answer</label>
               <input value={form.correct_answer} onChange={(e) => setForm({ ...form, correct_answer: e.target.value })} placeholder="Exact correct answer"
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Marks</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Marks</label>
               <input type="number" min={1} max={50} value={form.marks} onChange={(e) => setForm({ ...form, marks: Number(e.target.value) })}
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Working space height (px)</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Working space height (px)</label>
               <input type="number" min={120} max={720} step={20} value={form.working_space} onChange={(e) => setForm({ ...form, working_space: Number(e.target.value) })}
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
             </div>
           </div>
           <div className="flex gap-2">
@@ -216,12 +216,12 @@ export default function QuestionsManager() {
       <Card padding="none">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="font-bold text-slate-900 flex items-center gap-2">
-            <BookOpen size={18} className="text-slate-400" /> Existing Questions
+            <BookOpen size={18} className="text-muted" /> Existing Questions
           </h2>
           <Badge variant="default">{questions.length} total</Badge>
         </div>
         {questions.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">
+          <div className="text-center py-12 text-muted">
             <BookOpen size={32} className="mx-auto mb-2 opacity-30" />
             <p>No questions yet for this contest</p>
           </div>
@@ -237,11 +237,11 @@ export default function QuestionsManager() {
                   </div>
                   <p className="font-semibold text-slate-900 mt-1">{q.question}</p>
                   {q.type === "mcq" && (
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-muted mt-0.5">
                       {[q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean).join("  |  ")}
                     </p>
                   )}
-                  <p className="text-xs text-emerald-600 font-medium mt-0.5">✓ {q.correct_answer}</p>
+                  <p className="text-xs text-emerald-600 font-medium mt-0.5 inline-flex items-center gap-1"><CheckCircle2 size={12} /> {q.correct_answer}</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <Button size="sm" variant="outline" icon={<Pencil size={14} />} onClick={() => startEdit(q)}>Edit</Button>

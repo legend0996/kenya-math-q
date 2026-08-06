@@ -102,12 +102,12 @@ export default function InstructionsManager() {
     <div className="space-y-6">
       <Card>
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 text-blue-600">
+          <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center shrink-0 text-primary-dark">
             <FileText size={20} />
           </div>
           <div>
             <h2 className="font-bold text-slate-900">Compulsory Contest Instructions</h2>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="text-sm text-muted mt-0.5">
               Written instructions for each grade/form. Students see them as the FIRST page when starting the contest
               and must tap &quot;I agree&quot; before questions appear. Add, edit or delete anytime — changes apply to
               students who haven&apos;t started yet.
@@ -116,11 +116,11 @@ export default function InstructionsManager() {
         </div>
 
         <div className="mt-4">
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Contest</label>
+          <label className="block text-sm font-medium text-foreground mb-1.5">Contest</label>
           <select
             value={contestId ?? ""}
             onChange={(e) => setContestId(Number(e.target.value))}
-            className="w-full sm:w-96 px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+            className="w-full sm:w-96 px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
           >
             {contests.map((c) => (
               <option key={c.id} value={c.id}>{c.name} ({c.year})</option>
@@ -158,7 +158,7 @@ export default function InstructionsManager() {
               </div>
 
               {!editing && hasSaved && (
-                <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 whitespace-pre-wrap max-h-36 overflow-y-auto">
+                <div className="bg-slate-50 rounded-xl p-3 text-sm text-foreground whitespace-pre-wrap max-h-36 overflow-y-auto">
                   {saved[g]}
                 </div>
               )}
@@ -169,7 +169,7 @@ export default function InstructionsManager() {
                   value={drafts[g] ?? saved[g] ?? ""}
                   onChange={(e) => setDrafts((p) => ({ ...p, [g]: e.target.value }))}
                   placeholder="Type the instructions for this grade/form here…"
-                  className="w-full px-4 py-3 text-sm bg-slate-50 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 text-sm bg-slate-50 rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all resize-none"
                 />
               )}
 
@@ -193,7 +193,7 @@ export default function InstructionsManager() {
         })}
       </div>
 
-      <p className="text-xs text-slate-400 flex items-center gap-1.5">
+      <p className="text-xs text-muted flex items-center gap-1.5">
         <ChevronDown size={13} /> A grade with no instructions will start the exam directly, without the agreement page.
       </p>
     </div>

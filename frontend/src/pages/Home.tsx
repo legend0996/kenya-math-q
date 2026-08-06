@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import {
   ArrowRight, CheckCircle2, BookOpen, Award,
   Users, School, MapPin, Clock, Send,
-  ChevronRight,
-} from "lucide-react";
-import { Button } from "../components/ui/Button";
+  ChevronRight, Play,
+} from "lucide-react";import { Button } from "../components/ui/Button";
+import { Input, Textarea } from "../components/ui/Input";
 import { apiUrl } from "../utils/api";
 
 const HOW_IT_WORKS = [
@@ -23,6 +23,7 @@ type ContestInfo = { id?: number; name?: string; status: string; start_time?: st
 export default function Home() {
   const [contest, setContest] = useState<ContestInfo>(null);
   const [contact, setContact] = useState({ name: "", email: "", message: "" });
+  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     fetch(apiUrl("/api/contest/current"))
@@ -31,19 +32,20 @@ export default function Home() {
       .catch(() => setContest({ status: "none" }));
   }, []);
 
+  const handleContact = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSent(true);
+  };
+
   return (
-    <main className="pt-16">
+    <main className="pt-[104px]">
 
       {/* ── HERO ── */}
       <section
         id="home"
-        className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 overflow-hidden
-          bg-linear-to-br from-blue-700 via-blue-800 to-indigo-900 text-white"
+        className="relative flex flex-col items-center justify-center text-center px-6 py-24 overflow-hidden bg-charcoal-200 text-white"
       >
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "40px 40px" }}
-        />
+        <div className="absolute inset-0 dot-pattern" />
 
         <div className="relative z-10 max-w-3xl mx-auto">
           <div className="flex justify-center mb-6">
@@ -52,58 +54,50 @@ export default function Home() {
               alt="Kenya Math Quest"
               width={110}
               height={110}
-              className="rounded-full shadow-2xl shadow-blue-900/50 border-4 border-white/20"
-            />          </div>
+              className="rounded-full shadow-lifted border-4 border-white/10"
+            />
+          </div>
 
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/15 backdrop-blur-sm rounded-full text-sm font-medium mb-8 border border-white/20">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 pulse-dot" />
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 rounded-full text-sm font-medium mb-8 border border-white/15">
+            <span className="w-2 h-2 rounded-full bg-cool-sky-400 pulse-dot" />
             2026 Competition Season Now Open
           </span>
 
-          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 leading-tight tracking-tight">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight tracking-tight">
             Kenya Math
             <br />
-            <span className="text-blue-300">Quest</span>
+            <span className="text-pumpkin-spice-600">Quest</span>
           </h1>
 
-          <p className="text-xl md:text-2xl mb-3 font-semibold text-blue-100">
+          <p className="text-xl md:text-2xl mb-3 font-semibold text-slate-200">
             Challenge the Numbers, Change the Nation
           </p>
 
-          <p className="max-w-xl mx-auto text-base md:text-lg text-blue-200 mb-10 leading-relaxed">
+          <p className="max-w-xl mx-auto text-base md:text-lg text-slate-500 mb-10 leading-relaxed">
             A national mathematics competition empowering students from Grade 7
             to Form 4 to sharpen problem-solving and critical thinking skills.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a
-              href="/register"
-              className="inline-flex items-center gap-2 px-6 py-3.5 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 shadow-lg shadow-blue-900/30 transition-all"
-            >
-              Get Started <ArrowRight size={18} />
+            <a href="/register">
+              <Button size="lg" variant="light">
+                Get Started <ArrowRight size={18} />
+              </Button>
             </a>
-            <a
-              href="/#contest"
-              className="inline-flex items-center gap-2 px-6 py-3.5 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all"
-            >
-              View Contest <ChevronRight size={18} />
+            <a href="/#contest">
+              <Button size="lg" variant="ghost" className="border border-white/20 text-white hover:bg-white/10">
+                View Contest <ChevronRight size={18} />
+              </Button>
             </a>
           </div>
-        </div>
-
-        {/* Wave */}
-        <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
-          <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" className="fill-slate-50 w-full">
-            <path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" />
-          </svg>
         </div>
       </section>
 
       {/* ── STATS ── */}
-      <section className="py-20 px-4 bg-slate-50">
+      <section className="py-20 px-4 bg-surface">
         <div className="max-w-6xl mx-auto text-center">
-          <p className="text-sm font-semibold text-blue-600 uppercase tracking-widest mb-3">Our Impact</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-14">
+          <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">Our Impact</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-14">
             Shaping the Next Generation
           </h2>
 
@@ -114,14 +108,14 @@ export default function Home() {
               { value: 47,    label: "Counties Reached",        icon: <MapPin size={28} />,  suffix: "" },
             ].map((item, i) => (
               <div key={i}
-                className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md hover:border-blue-100 transition-all group">
-                <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5 text-blue-600 group-hover:bg-blue-100 transition-colors">
+                className="bg-white rounded-2xl p-8 shadow-soft border border-border hover:shadow-lifted hover:border-border-dark transition-all group">
+                <div className="w-14 h-14 bg-pumpkin-spice-900/70 text-primary-dark rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:bg-primary group-hover:text-white transition-colors">
                   {item.icon}
                 </div>
-                <h3 className="text-4xl font-extrabold text-blue-600 mb-2">
+                <h3 className="text-4xl font-bold text-primary-dark mb-2">
                   <Counter target={item.value} />{item.suffix}
                 </h3>
-                <p className="text-slate-600 font-medium">{item.label}</p>
+                <p className="text-muted font-medium">{item.label}</p>
               </div>
             ))}
           </div>
@@ -131,22 +125,22 @@ export default function Home() {
       {/* ── HOW IT WORKS ── */}
       <section className="py-20 px-4 bg-white">
         <div className="max-w-6xl mx-auto text-center">
-          <p className="text-sm font-semibold text-blue-600 uppercase tracking-widest mb-3">Process</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-14">
+          <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">Process</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-14">
             How It Works
           </h2>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {HOW_IT_WORKS.map((item, i) => (
               <div key={i} className="relative text-center group">
-                <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-md shadow-blue-200 group-hover:scale-110 transition-transform">
+                <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-soft shadow-primary/25 group-hover:scale-105 group-hover:bg-primary-dark transition-all">
                   {item.icon}
                 </div>
-                <span className="block text-xs font-bold text-blue-300 mb-1">{item.step}</span>
-                <h3 className="font-bold text-slate-900 mb-2 text-sm">{item.title}</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
+                <span className="block text-xs font-bold text-cool-sky-300 mb-1">{item.step}</span>
+                <h3 className="font-bold text-foreground mb-2 text-sm">{item.title}</h3>
+                <p className="text-xs text-muted leading-relaxed">{item.desc}</p>
                 {i < HOW_IT_WORKS.length - 1 && (
-                  <div className="hidden lg:block absolute top-7 left-[calc(100%-8px)] w-4 text-slate-300">
+                  <div className="hidden lg:block absolute top-7 left-[calc(100%-8px)] w-4 text-border-dark">
                     <ChevronRight size={16} />
                   </div>
                 )}
@@ -157,23 +151,23 @@ export default function Home() {
       </section>
 
       {/* ── CONTEST ── */}
-      <section id="contest" className="scroll-mt-20 py-20 px-4 bg-slate-50">
+      <section id="contest" className="scroll-mt-32 py-20 px-4 bg-surface">
         <div className="max-w-2xl mx-auto text-center">
-          <p className="text-sm font-semibold text-blue-600 uppercase tracking-widest mb-3">Current Contest</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-10">
+          <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">Current Contest</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-10">
             Contest Status
           </h2>
 
           {!contest ? (
-            <div className="bg-white rounded-2xl p-10 shadow-sm border border-slate-100">
+            <div className="bg-white rounded-2xl p-10 shadow-soft border border-border">
               <div className="skeleton h-6 w-32 mx-auto mb-4 rounded" />
               <div className="skeleton h-12 w-48 mx-auto rounded" />
             </div>
           ) : contest.status === "upcoming" ? (
-            <div className="bg-white rounded-2xl p-10 shadow-sm border border-blue-100">
-              <Clock size={40} className="text-blue-600 mx-auto mb-5" />
-              <p className="text-slate-500 mb-3 font-medium">Contest starts in</p>
-              <p className="text-5xl font-extrabold text-blue-700 mb-6">
+            <div className="bg-white rounded-2xl p-10 shadow-soft border border-cool-sky-800">
+              <Clock size={40} className="text-cool-sky-400 mx-auto mb-5" />
+              <p className="text-muted mb-3 font-medium">Contest starts in</p>
+              <p className="text-5xl font-bold text-cool-sky-300 mb-6">
                 <Countdown targetDate={contest.start_time!} />
               </p>
               <a href="/register">
@@ -181,83 +175,88 @@ export default function Home() {
               </a>
             </div>
           ) : contest.status === "live" ? (
-            <div className="bg-white rounded-2xl p-10 shadow-sm border border-emerald-200">
+            <div className="bg-white rounded-2xl p-10 shadow-soft border border-emerald-300">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <span className="w-3 h-3 rounded-full bg-emerald-500 pulse-dot" />
                 <span className="text-sm font-semibold text-emerald-600 uppercase tracking-wider">Live Now</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">{contest.name}</h3>
-              <p className="text-slate-500 mb-6">The contest is currently in progress</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">{contest.name}</h3>
+              <p className="text-muted mb-6">The contest is currently in progress</p>
               <a href="/login"><Button size="lg">Join the Contest <ArrowRight size={18} /></Button></a>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl p-10 shadow-sm border border-slate-100">
-              <p className="text-slate-500 text-lg">No active contest at the moment.</p>
-              <p className="text-sm text-slate-400 mt-2">Check back soon for the next competition.</p>
+            <div className="bg-white rounded-2xl p-10 shadow-soft border border-border">
+              <p className="text-foreground text-lg">No active contest at the moment.</p>
+              <p className="text-sm text-muted mt-2">Check back soon for the next competition.</p>
             </div>
           )}
         </div>
       </section>
 
       {/* ── TUITION ── */}
-      <section id="tuition" className="scroll-mt-20 py-20 px-4 bg-white">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-sm font-semibold text-blue-600 uppercase tracking-widest mb-3">Learn &amp; Revise</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Tuition Videos</h2>
-          <p className="text-slate-500 mb-8 leading-relaxed">
-            Watch free mathematics lessons, topic breakdowns and past-paper solutions
-            from our tutors to sharpen your skills before the contest.
-          </p>
-          <a href="/tuition">
-            <Button size="lg">Watch Lessons <ArrowRight size={18} /></Button>
-          </a>
+      <section id="tuition" className="scroll-mt-32 py-20 px-4 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-primary-darker rounded-3xl p-10 md:p-14 text-center text-white overflow-hidden relative">
+            <div className="absolute inset-0 dot-pattern" />
+            <div className="relative z-10">
+              <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Play size={24} className="text-pumpkin-spice-600" />
+              </div>
+              <p className="text-sm font-semibold text-pumpkin-spice-600 uppercase tracking-widest mb-3">Learn &amp; Revise</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Free Tuition Videos</h2>
+              <p className="text-slate-400 mb-8 leading-relaxed max-w-xl mx-auto">
+                Watch free mathematics lessons, topic breakdowns and past-paper solutions
+                from our tutors to sharpen your skills before the contest.
+              </p>
+              <a href="/tuition">
+                <Button size="lg" variant="light">
+                  Watch Lessons <ArrowRight size={18} />
+                </Button>
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ── CONTACT ── */}
-      <section id="contact" className="scroll-mt-20 py-20 px-4 bg-slate-50">
+      <section id="contact" className="scroll-mt-32 py-20 px-4 bg-surface">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-10">
-            <p className="text-sm font-semibold text-blue-600 uppercase tracking-widest mb-3">Get In Touch</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Contact Us</h2>
+            <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">Get In Touch</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground">Contact Us</h2>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Your Name</label>
-                <input
-                  placeholder="John Kamau"
-                  value={contact.name}
-                  onChange={(e) => setContact({ ...contact, name: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                />
+          <div className="bg-white rounded-2xl shadow-card border border-border p-8">
+            {sent ? (
+              <div className="text-center py-10">
+                <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 size={30} className="text-emerald-600" />
+                </div>
+                <h3 className="text-xl font-bold text-foreground">Message received</h3>
+                <p className="text-muted mt-2 text-sm">We'll get back to you soon.</p>
+                <Button variant="outline" className="mt-6" onClick={() => { setSent(false); setContact({ name: "", email: "", message: "" }); }}>
+                  Send another message
+                </Button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="john@school.co.ke"
-                  value={contact.email}
-                  onChange={(e) => setContact({ ...contact, email: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Message</label>
-                <textarea
-                  rows={4}
-                  placeholder="How can we help you?"
-                  value={contact.message}
-                  onChange={(e) => setContact({ ...contact, message: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
-                />
-              </div>
-              <Button size="lg" fullWidth icon={<Send size={16} />}>
-                Send Message
-              </Button>
-            </div>
+            ) : (
+              <form onSubmit={handleContact} className="space-y-4">
+                <Input label="Your Name" placeholder="John Kamau" required
+                  value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
+                <Input label="Email Address" type="email" placeholder="john@school.co.ke" required
+                  value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+                <Textarea label="Message" rows={4} placeholder="How can we help you?" required
+                  value={contact.message} onChange={(e) => setContact({ ...contact, message: e.target.value })} />
+                <Button size="lg" fullWidth type="submit" icon={<Send size={16} />}>
+                  Send Message
+                </Button>
+              </form>
+            )}
           </div>
+
+          <p className="text-center text-sm text-muted mt-6">
+            Prefer to chat? Use the support widget in the corner, or write to us via the{" "}
+            <a href="/contact" className="font-semibold text-primary-dark hover:text-primary">contact page</a>.
+          </p>
         </div>
       </section>
     </main>
