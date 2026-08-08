@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { apiUrl, setUser } from "../utils/api";
-import { LogIn, GraduationCap, School, Users, Eye, EyeOff, User, KeyRound, ArrowLeft } from "lucide-react";
+import { LogIn, GraduationCap, School, Users, Eye, EyeOff, User, KeyRound, ArrowLeft, CheckCircle2 } from "lucide-react";
 import Image from "../components/Image";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";

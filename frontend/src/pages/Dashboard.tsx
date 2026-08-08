@@ -11,6 +11,8 @@ import { Button } from "../components/ui/Button";
 import { Card, StatCard } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
+import { Alert } from "../components/ui/Alert";
+import { Modal } from "../components/ui/Modal";
 import { apiUrl, authHeaders, fetchMe, logout } from "../utils/api";
 import { THEMES, type Theme, themeByColor, applyTheme, emitThemeChange, readSavedTheme } from "../theme";
 

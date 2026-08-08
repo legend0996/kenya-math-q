@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { apiUrl, authHeaders, fetchMe, getUser } from "../utils/api";
-import { Mail, Lock, GraduationCap } from "lucide-react";
+import { Mail, Lock, GraduationCap, ShieldCheck } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Input";
 import { Alert } from "../components/ui/Alert";

@@ -9,6 +9,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
+import { Alert } from "../components/ui/Alert";
 import { apiUrl, authHeaders, downloadAuthorized, fetchMe } from "../utils/api";
 
 type HistoryRow = {

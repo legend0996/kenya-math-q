@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { apiUrl, authHeaders, fetchMe, getUser } from "../utils/api";
-import { Send, LifeBuoy, Check, CheckCheck } from "lucide-react";
+import { Send, LifeBuoy, Check, CheckCheck, Lock } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Alert } from "../components/ui/Alert";
 

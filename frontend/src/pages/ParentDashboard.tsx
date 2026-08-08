@@ -10,6 +10,9 @@ import { Button } from "../components/ui/Button";
 import { Card, StatCard } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
+import { Alert } from "../components/ui/Alert";
+import { Modal } from "../components/ui/Modal";
+import { Input, Select } from "../components/ui/Input";
 import { apiUrl, authHeaders, fetchMe, logout } from "../utils/api";
 
 type Child = {
@@ -227,15 +230,10 @@ export default function ParentDashboard() {
           <div className="flex items-center gap-4">
             <Button variant="ghost" icon={<LogOut size={16} />}
               className="text-red-500 hover:bg-red-50 hover:text-red-600"
-              onClick={() => { localStorage.removeItem("token"); window.location.href = "/login"; }}>
+              onClick={async () => { await logout(); window.location.href = "/login"; }}>
               Logout
             </Button>
           </div>
-          <Button variant="ghost" icon={<LogOut size={16} />}
-            className="text-red-500 hover:bg-red-50 hover:text-red-600"
-            onClick={async () => { await logout(); window.location.href = "/login"; }}>
-            Logout
-          </Button>
         </div>
 
         {feedback && (

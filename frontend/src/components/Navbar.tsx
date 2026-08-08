@@ -2,15 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, LayoutDashboard, LogIn, UserPlus, User } from "lucide-react";
+import {
+  Menu, X, LayoutDashboard, LogIn, UserPlus, User,
+  LogOut, Mail, Phone, ChevronRight,
+} from "lucide-react";
 import { fetchMe, logout } from "../utils/api";
 import Image from "./Image";
 
 type User = { role?: string; name?: string };
 
-const NAV_LINKS = [
-  { href: "/#home",    label: "Home" },
-  { href: "/#contest", label: "Contest" },
+const MAIN_LINKS = [
+  { href: "/", label: "Home" },
+  { href: "/competition", label: "Competition" },
+  { href: "/schools", label: "Schools" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/tuition", label: "Tuition" },
   { href: "/materials", label: "Materials" },
