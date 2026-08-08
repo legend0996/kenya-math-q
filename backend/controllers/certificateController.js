@@ -2,6 +2,7 @@ import pool from "../config/db.js";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { sendCertificateEmail } from "../utils/emailService.js";
 
@@ -17,6 +18,17 @@ const ensureUploads = () => {
   if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   const assets = path.join(UPLOADS_DIR, "assets");
   if (!fs.existsSync(assets)) fs.mkdirSync(assets, { recursive: true });
+};
+
+// Never store the download secret in plaintext — only a SHA-256 hash.
+const sha256 = (value) => crypto.createHash("sha256").update(String(value)).digest("hex");
+
+// Constant-time comparison to avoid leaking timing on the secret check.
+const timingSafeEqualStr = (a, b) => {
+  const ba = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
 };
 
 const makePassword = () =>
@@ -327,12 +339,12 @@ export const generateCertificates = async (req, res) => {
       doc.end();
       await new Promise((resolve) => stream.on("finish", resolve));
 
-      // Save record
+      // Save record — store only the hash of the download secret
       const certRes = await pool.query(
         `INSERT INTO certificates
-          (student_id, contest_id, score, grade, password, file_url, sent_status, school, template_id)
+          (student_id, contest_id, score, grade, password_hash, file_url, sent_status, school, template_id)
          VALUES (?,?,?,?,?,?,'unsent',?,?)`,
-        [student.id, contest_id, score, gradeText, password, `/uploads/${fileName}`, student.school || null, template.id],
+        [student.id, contest_id, score, gradeText, sha256(password), `/uploads/${fileName}`, student.school || null, template.id],
       );
       const cert = {
         id: certRes.insertId,
@@ -340,7 +352,7 @@ export const generateCertificates = async (req, res) => {
         contest_id,
         score,
         grade: gradeText,
-        password,
+        password, // returned once so the caller can email it; it is never stored in plaintext
         file_url: `/uploads/${fileName}`,
         sent_status: "unsent",
         school: student.school || null,
@@ -372,12 +384,17 @@ export const downloadCertificate = async (req, res) => {
   try {
     const { name, contest_id, password } = req.body;
 
+    if (!name || !contest_id || typeof password !== "string") {
+      return res.status(400).json({ error: "name, contest_id and password are required" });
+    }
+
     const studentResult = await pool.query(
       "SELECT * FROM students WHERE LOWER(full_name)=LOWER(?)",
       [name],
     );
     if (studentResult.rows.length === 0) {
-      return res.status(404).json({ error: "Student not found" });
+      // Generic message — never disclose whether the student exists
+      return res.status(403).json({ error: "Invalid certificate password" });
     }
     const student = studentResult.rows[0];
 
@@ -385,11 +402,8 @@ export const downloadCertificate = async (req, res) => {
       "SELECT * FROM registrations WHERE student_id=? AND contest_id=?",
       [student.id, contest_id],
     );
-    if (reg.rows.length === 0) {
-      return res.status(404).json({ error: "No registration found" });
-    }
-    if (reg.rows[0].payment_status !== "paid") {
-      return res.status(403).json({ error: "Certificate unavailable: payment required" });
+    if (reg.rows.length === 0 || reg.rows[0].payment_status !== "paid") {
+      return res.status(403).json({ error: "Invalid certificate password" });
     }
 
     const cert = await pool.query(
@@ -397,10 +411,12 @@ export const downloadCertificate = async (req, res) => {
       [student.id, contest_id],
     );
     if (cert.rows.length === 0) {
-      return res.status(404).json({ error: "Certificate not found" });
+      return res.status(403).json({ error: "Invalid certificate password" });
     }
 
-    if (cert.rows[0].password !== password) {
+    // Compare against the stored SHA-256 hash (constant-time on equal lengths).
+    const storedHash = cert.rows[0].password_hash || (cert.rows[0].password ? sha256(cert.rows[0].password) : null);
+    if (!storedHash || !timingSafeEqualStr(storedHash, sha256(password))) {
       return res.status(403).json({ error: "Invalid certificate password" });
     }
 

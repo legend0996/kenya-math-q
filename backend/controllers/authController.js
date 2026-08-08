@@ -72,6 +72,64 @@ export const logout = (req, res) => {
   res.json({ success: true, message: "Logged out" });
 };
 
+// 👤 CURRENT USER — reads identity from the verified token (cookie or header)
+export const getMe = async (req, res) => {
+  try {
+    const { id, role } = req.user;
+
+    if (role === "student") {
+      const [rows] = await pool.query(
+        "SELECT id, full_name, email, username, school, grade, phone, paid FROM students WHERE id=?",
+        [id],
+      );
+      if (!rows[0]) return res.status(404).json({ error: "Account not found" });
+      const s = rows[0];
+      return res.json({
+        user: { id: s.id, role: "student", name: s.full_name, email: s.email, username: s.username, school: s.school, grade: s.grade, phone: s.phone },
+      });
+    }
+    if (role === "parent") {
+      const [rows] = await pool.query(
+        "SELECT id, full_name, email, phone FROM parents WHERE id=?",
+        [id],
+      );
+      if (!rows[0]) return res.status(404).json({ error: "Account not found" });
+      const p = rows[0];
+      return res.json({ user: { id: p.id, role: "parent", name: p.full_name, email: p.email, phone: p.phone } });
+    }
+    if (role === "school") {
+      const [rows] = await pool.query(
+        "SELECT id, name, email, county FROM schools WHERE id=?",
+        [id],
+      );
+      if (!rows[0]) return res.status(404).json({ error: "Account not found" });
+      const s = rows[0];
+      return res.json({ user: { id: s.id, role: "school", name: s.name, email: s.email, county: s.county, school: s.name } });
+    }
+    if (role === "owner") {
+      const [ownerRows] = await pool.query(
+        "SELECT id, name, email FROM owners WHERE id=?",
+        [id],
+      );
+      if (ownerRows[0]) {
+        return res.json({ user: { id: ownerRows[0].id, role: "owner", name: ownerRows[0].name, email: ownerRows[0].email } });
+      }
+      const [studRows] = await pool.query(
+        "SELECT id, full_name, email, school FROM students WHERE id=? AND is_admin=1",
+        [id],
+      );
+      if (studRows[0]) {
+        return res.json({ user: { id: studRows[0].id, role: "owner", name: studRows[0].full_name, email: studRows[0].email, school: studRows[0].school } });
+      }
+      return res.status(404).json({ error: "Account not found" });
+    }
+    res.status(401).json({ error: "Unknown role" });
+  } catch (error) {
+    console.error("GET ME ERROR:", error);
+    res.status(500).json({ error: "Could not load account" });
+  }
+};
+
 // 👨‍🎓 STUDENT REGISTER
 export const registerStudent = async (req, res) => {
   try {
@@ -388,6 +446,14 @@ export const changeEmail = async (req, res) => {
 
 const makeCode = () => crypto.randomInt(100000, 999999).toString();
 
+// Store only a SHA-256 hash of the reset code (never the plaintext).
+const hashCode = (code) => crypto.createHash("sha256").update(String(code)).digest("hex");
+const safeEquals = (a, b) => {
+  const ah = Buffer.from(String(a || ""), "hex");
+  const bh = Buffer.from(String(b || ""), "hex");
+  return ah.length === bh.length && ah.length > 0 && crypto.timingSafeEqual(ah, bh);
+};
+
 // 🔑 REQUEST PASSWORD RESET — emails a 15-minute code
 export const requestPasswordReset = async (req, res) => {
   try {
@@ -395,32 +461,44 @@ export const requestPasswordReset = async (req, res) => {
     const acct = await lookupByIdentifier(email);
     if (!acct || acct.role === "owner") {
       // No existing account (or owner); still return success to avoid enumeration
-      return res.json({ success: true, exists: false, message: "If that account exists, a reset code was sent." });
+      return res.json({ success: true, message: "If that account exists, a reset code was sent." });
+    }
+
+    // Fail closed: if email delivery is not available, do NOT mint a code and
+    // do NOT return one to the caller.
+    const emailConfigured = Boolean(
+      process.env.SMTP_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS,
+    );
+    if (!emailConfigured) {
+      console.error(`PASSWORD RESET SKIPPED: email not configured for ${acct.email}`);
+      return res.json({ success: true, message: "If that account exists, a reset code was sent." });
     }
 
     const code = makeCode();
     const expires = new Date(Date.now() + 15 * 60 * 1000);
     await pool.query("DELETE FROM password_resets WHERE email=?", [acct.email]);
     await pool.query(
-      "INSERT INTO password_resets (email, code, expires_at) VALUES (?,?,?)",
-      [acct.email, code, expires],
+      "INSERT INTO password_resets (email, code_hash, expires_at) VALUES (?,?,?)",
+      [acct.email, hashCode(code), expires],
     );
 
     try {
       await sendPasswordResetEmail(acct.email, code, acct.name, acct.role);
     } catch (e) {
+      // Clean up the unusable record; never leak the code to the client.
       console.error("RESET EMAIL ERROR:", e.message);
-      return res.json({ success: true, exists: true, message: "Reset code generated (email not configured).", dev_code: code });
+      await pool.query("DELETE FROM password_resets WHERE email=?", [acct.email]);
+      return res.status(500).json({ error: "Could not send the reset code right now. Please try again later." });
     }
 
-    res.json({ success: true, exists: true, message: "A reset code was sent to your email." });
+    res.json({ success: true, message: "A reset code was sent to your email." });
   } catch (error) {
     console.error("REQUEST RESET ERROR:", error);
     res.status(500).json({ error: "Could not start password reset." });
   }
 };
 
-// 🔓 RESET PASSWORD with the emailed code (valid 15 minutes)
+// 🔓 RESET PASSWORD with the emailed code (valid 15 minutes, 5 attempts max)
 export const resetPassword = async (req, res) => {
   try {
     const { email, code, new_password } = req.body;
@@ -430,8 +508,8 @@ export const resetPassword = async (req, res) => {
 
     const row = (
       await pool.query(
-        "SELECT * FROM password_resets WHERE email=? AND code=? AND used=0 LIMIT 1",
-        [email, String(code || "").trim()],
+        "SELECT * FROM password_resets WHERE email=? AND used=0 ORDER BY id DESC LIMIT 1",
+        [String(email || "").trim()],
       )
     ).rows[0];
     if (!row) {
@@ -440,13 +518,27 @@ export const resetPassword = async (req, res) => {
     if (new Date(row.expires_at).getTime() < Date.now()) {
       return res.status(400).json({ error: "This code has expired. Request a new one." });
     }
+    if ((row.attempts || 0) >= 5) {
+      return res.status(400).json({ error: "Too many attempts. Request a new code." });
+    }
+
+    // Compare against the stored hash (timing-safe). Backwards-compatible
+    // fallback: rows created before hashing stored a plaintext `code`.
+    const matches =
+      (row.code_hash && safeEquals(row.code_hash, hashCode(code))) ||
+      (row.code_hash ? false : row.code === String(code || "").trim());
+
+    if (!matches) {
+      await pool.query("UPDATE password_resets SET attempts=attempts+1 WHERE id=?", [row.id]);
+      return res.status(400).json({ error: "Invalid or expired reset code" });
+    }
 
     const acct = await lookupByIdentifier(email);
     if (!acct) return res.status(400).json({ error: "Account not found" });
 
     const hashed = await bcrypt.hash(new_password, 10);
     await pool.query(`UPDATE ${TABLES[acct.role]} SET password=? WHERE id=?`, [hashed, acct.id]);
-    await pool.query("UPDATE password_resets SET used=1 WHERE id=?", [row.id]);
+    await pool.query("UPDATE password_resets SET used=1, attempts=attempts+1 WHERE id=?", [row.id]);
 
     res.json({ success: true, message: "Password updated. You can now log in." });
   } catch (error) {

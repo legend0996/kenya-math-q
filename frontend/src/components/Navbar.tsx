@@ -3,20 +3,10 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, LayoutDashboard, LogIn, UserPlus, User } from "lucide-react";
+import { fetchMe, logout } from "../utils/api";
 import Image from "./Image";
 
 type User = { role?: string; name?: string };
-
-const readTokenUser = (): User | null => {
-  if (typeof window === "undefined") return null;
-  const token = localStorage.getItem("token");
-  if (!token) return null;
-  try {
-    return JSON.parse(atob(token.split(".")[1])) as User;
-  } catch {
-    return null;
-  }
-};
 
 const NAV_LINKS = [
   { href: "/#home",    label: "Home" },
@@ -30,7 +20,7 @@ const NAV_LINKS = [
 const DASHBOARD_PATHS = ["/dashboard", "/exam", "/contests", "/student-review", "/settings", "/support", "/parent-dashboard", "/school-dashboard"];
 
 export default function Navbar() {
-  const [user, setUser] = useState<User | null>(() => readTokenUser());
+  const [user, setUser] = useState<User | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
@@ -40,6 +30,18 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Session lives in an httpOnly cookie — resolve who we are via /me.
+  useEffect(() => {
+    let active = true;
+    fetchMe().then((u) => {
+      if (!active) return;
+      setUser(u ? { role: u.role, name: u.name } : null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [location.pathname]);
 
   const isActive = (href: string) => {
     if (href === "/#home") return location.pathname === "/" && (!location.hash || location.hash === "#home");
@@ -66,8 +68,8 @@ export default function Navbar() {
       : "/dashboard";
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
+  const handleLogout = async () => {
+    await logout();
     setUser(null);
     window.location.href = "/";
   };

@@ -287,7 +287,7 @@ export default function CertificateManager() {
     fd.append("image", file);
     try {
       const r = await fetch(apiUrl("/api/certificate/image"), {
-        method: "POST", headers: { Authorization: authHeaders().Authorization }, body: fd,
+        method: "POST", body: fd,
       });
       const d = await r.json();
       if (!d.success) { showFeedback("error", d.error || "Upload failed"); return; }
@@ -397,7 +397,7 @@ export default function CertificateManager() {
     if (manualNotes) fd.append("notes", manualNotes);
     try {
       const r = await fetch(apiUrl("/api/certificate/manual"), {
-        method: "POST", headers: { Authorization: authHeaders().Authorization }, body: fd,
+        method: "POST", body: fd,
       });
       const d = await r.json();
       if (d.success) { showFeedback("success", "Certificate allocated to student"); setManualFile(null); setManualNotes(""); loadCerts(contestId); }

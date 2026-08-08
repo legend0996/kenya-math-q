@@ -5,7 +5,7 @@ import { Button } from "../components/ui/Button";
 import { Card, StatCard } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
-import { apiUrl, authHeaders } from "../utils/api";
+import { apiUrl, authHeaders, fetchMe, logout } from "../utils/api";
 
 type Student = {
   id: number;
@@ -32,13 +32,12 @@ export default function SchoolDashboard() {
   const [feedback, setFeedback]   = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) { window.location.href = "/login"; return; }
-    try {
-      const p = JSON.parse(atob(token.split(".")[1]));
-      setSchool(p.school || "");
-      fetchOverview(p.school);
-    } catch { window.location.href = "/login"; }
+    fetchMe().then((u) => {
+      if (!u?.id || u.role !== "school") { window.location.href = "/login"; return; }
+      const schoolName = u.school || u.name || "";
+      setSchool(schoolName);
+      fetchOverview(schoolName);
+    });
   }, []);
 
   const fetchOverview = async (schoolName: string) => {
@@ -99,7 +98,7 @@ export default function SchoolDashboard() {
           </div>
           <Button variant="ghost" icon={<LogOut size={16} />}
             className="text-red-500 hover:bg-red-50 hover:text-red-600"
-            onClick={() => { localStorage.removeItem("token"); window.location.href = "/login"; }}>
+            onClick={async () => { await logout(); window.location.href = "/login"; }}>
             Logout
           </Button>
         </div>

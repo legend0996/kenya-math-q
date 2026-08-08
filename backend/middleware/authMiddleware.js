@@ -18,6 +18,15 @@ export const loginLimiter = rateLimit({
   message: { error: "Too many login attempts. Try again later." },
 });
 
+// Strict limiter for password-reset code verification (brute-force protection)
+export const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many reset attempts. Try again later." },
+});
+
 export const verifyToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -34,6 +43,8 @@ export const verifyToken = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Students promoted to admin log in with role "owner".
+    if (decoded.role === "admin") decoded.role = "owner";
     req.user = decoded;
     next();
   } catch (error) {
@@ -44,6 +55,20 @@ export const verifyToken = (req, res, next) => {
 export const requireStudent = (req, res, next) => {
   if (req.user.role !== "student") {
     return res.status(403).json({ error: "Student access only" });
+  }
+  next();
+};
+
+export const requireParent = (req, res, next) => {
+  if (req.user.role !== "parent") {
+    return res.status(403).json({ error: "Parent access only" });
+  }
+  next();
+};
+
+export const requireSchool = (req, res, next) => {
+  if (req.user.role !== "school") {
+    return res.status(403).json({ error: "School access only" });
   }
   next();
 };

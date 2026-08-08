@@ -8,6 +8,8 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
+const PROD = process.env.NODE_ENV === "production";
+
 // Build the MySQL pool config, preferring a single connection URL
 // (DATABASE_URL / MYSQL_URL) when individual DB_* credentials are not set.
 function buildPoolConfig() {
@@ -54,6 +56,20 @@ function buildPoolConfig() {
   };
 }
 
+function validateConfig() {
+  // Never allow a production DB connection without TLS.
+  if (PROD && process.env.DB_SSL !== "true" && !process.env.DB_SSL_CA) {
+    throw new Error(
+      "Refusing to start in production without DB_SSL=true (set DB_SSL=true to use encrypted MySQL connections).",
+    );
+  }
+  if (PROD && !process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET must be set in production.");
+  }
+}
+
+validateConfig();
+
 const pool = mysql.createPool(buildPoolConfig());
 
 // Normalize common PostgreSQL-style placeholders and casts for MySQL compatibility.
@@ -76,6 +92,12 @@ function toMysql(sql, params = []) {
   // so queries that already use MySQL's `?` still get their values bound.
   return { sql: out, params: substituted ? outParams : params };
 }
+
+// MySQL duplicate-key (errno 1062 / ER_DUP_ENTRY); also accepts PostgreSQL 23505.
+export const isDuplicateKeyError = (e) => {
+  if (!e) return false;
+  return e.errno === 1062 || e.code === "ER_DUP_ENTRY" || e.code === "23505";
+};
 
 const db = {
   async query(sql, params = []) {

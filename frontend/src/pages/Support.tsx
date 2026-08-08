@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
-import { apiUrl, authHeaders, getUser } from "../utils/api";
+import { apiUrl, authHeaders, fetchMe, getUser } from "../utils/api";
 import { Send, LifeBuoy, Check, CheckCheck } from "lucide-react";
 import { Button } from "../components/ui/Button";
 
@@ -18,7 +18,7 @@ const time = (d?: string) =>
   d ? new Date(d).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
 
 export default function SupportPage() {
-  const me = getUser();
+  const [me, setMe] = useState(getUser());
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,6 +27,10 @@ export default function SupportPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const myId = me?.id;
+
+  useEffect(() => {
+    fetchMe().then((u) => setMe(u));
+  }, []);
 
   const load = async () => {
     if (!me) return;

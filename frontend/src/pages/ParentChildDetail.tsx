@@ -9,7 +9,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
-import { apiUrl, authHeaders, downloadAuthorized, getUser } from "../utils/api";
+import { apiUrl, authHeaders, downloadAuthorized, fetchMe } from "../utils/api";
 
 type HistoryRow = {
   id: number;
@@ -65,13 +65,8 @@ export default function ParentChildDetail() {
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) { navigate("/login"); return; }
-    const u = getUser();
-    if (!u?.id || u.role !== "parent") { navigate("/login"); return; }
+  const loadDetails = () => {
     if (!studentId) { navigate("/parent-dashboard"); return; }
-
     fetch(apiUrl(`/api/parent/child/${studentId}`), { headers: authHeaders() })
       .then((res) => res.json())
       .then((d) => {
@@ -89,6 +84,14 @@ export default function ParentChildDetail() {
       })
       .catch(() => setError("Connection error"))
       .finally(() => setPageLoading(false));
+  };
+
+  useEffect(() => {
+    fetchMe().then((u) => {
+      if (!u?.id || u.role !== "parent") { navigate("/login"); return; }
+      loadDetails();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, studentId]);
 
   if (pageLoading) return <PageSpinner message="Loading child details…" />;

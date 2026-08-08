@@ -1,4 +1,4 @@
-import pool from "../config/db.js";
+import pool, { isDuplicateKeyError } from "../config/db.js";
 import {
   darajaConfigured,
   paymentAmount,
@@ -54,8 +54,7 @@ export const submitPaymentProof = async (req, res) => {
         [student_id, contest_id, reg.id, mpesa_code, proof_text || null],
       );
     } catch (e) {
-      // Unique violation on mpesa_code (23505) => code already used by anyone
-      if (e.code === "23505") {
+      if (isDuplicateKeyError(e)) {
         return res.status(400).json({ error: "This M-PESA code has already been used" });
       }
       throw e;
@@ -64,7 +63,7 @@ export const submitPaymentProof = async (req, res) => {
     res.json({ success: true, message: "Payment proof submitted. Await approval." });
   } catch (error) {
     console.error("PAYMENT PROOF ERROR:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -124,46 +123,51 @@ export const initiateStkPush = async (req, res) => {
     });
   } catch (error) {
     console.error("STK PUSH ERROR:", error);
-    res.status(500).json({ error: error.message || "Could not initiate M-Pesa payment" });
+    res.status(500).json({ error: "Could not initiate M-Pesa payment" });
   }
 };
 
 // 🔔 M-PESA STK CALLBACK (public — Safaricom posts here)
-// Security: never trusts the callback alone. The checkout request is only
-// accepted while still 'stk_pending', the amount must match, and the real
-// transaction is confirmed via the STK Query API. Anything that fails to
-// verify falls back to 'review' (manual approval) instead of auto-marking paid.
+// Security model:
+//  - Only accepts payments currently in 'stk_pending' (rejects replays).
+//  - Serializes handling with a row lock (SELECT ... FOR UPDATE) so two
+//    concurrent callbacks for the same checkout can't double-settle.
+//  - Verifies amount + the real transaction via the STK Query API.
+//  - Any failure routes to 'review' (manual approval) instead of auto-approving.
 export const handleStkCallback = async (req, res) => {
+  const conn = await pool.getConnection();
   try {
     const info = parseCallback(req.body);
     if (!info) {
       return res.status(400).json({ ResultCode: 1, ResultDesc: "Invalid callback" });
     }
 
-    const payment = (
-      await pool.query(
-        "SELECT * FROM payments WHERE checkout_request_id=?",
-        [info.checkoutRequestId],
-      )
-    ).rows[0];
+    await conn.beginTransaction();
+
+    // Lock the exact checkout row for the duration of settlement.
+    const [rows] = await conn.query(
+      "SELECT * FROM payments WHERE checkout_request_id=? FOR UPDATE",
+      [info.checkoutRequestId],
+    );
+    const payment = rows[0];
 
     if (!payment) {
+      await conn.rollback();
       return res.status(404).json({ ResultCode: 1, ResultDesc: "Unknown checkout request" });
     }
 
-    // 🔒 Reject callbacks for already-settled payments (prevents replay)
+    // 🔒 Already settled → idempotent success (prevents replay / double marking).
     if (payment.status !== "stk_pending") {
-      return res.status(400).json({ ResultCode: 1, ResultDesc: "Payment already settled" });
+      await conn.commit();
+      return res.json({ ResultCode: 0, ResultDesc: "Success" });
     }
 
     if (info.resultCode === 0 && info.mpesaCode) {
       // 🔒 Amount must match what was charged when the STK push was initiated
       const charged = Number(payment.amount);
       if (charged > 0 && info.amount != null && Number(info.amount) !== charged) {
-        await pool.query(
-          "UPDATE payments SET status='review' WHERE id=?",
-          [payment.id],
-        );
+        await conn.query("UPDATE payments SET status='review' WHERE id=?", [payment.id]);
+        await conn.commit();
         return res.json({ ResultCode: 0, ResultDesc: "Success" });
       }
 
@@ -178,23 +182,23 @@ export const handleStkCallback = async (req, res) => {
       }
 
       if (!verified) {
-        // Could not confirm — route to manual review rather than auto-approving
-        await pool.query(
+        await conn.query(
           "UPDATE payments SET status='review', merchant_request_id=? WHERE id=?",
           [info.merchantRequestId || null, payment.id],
         );
+        await conn.commit();
         return res.json({ ResultCode: 0, ResultDesc: "Success" });
       }
 
       try {
-        await pool.query(
+        await conn.query(
           "UPDATE payments SET status='paid', mpesa_code=? WHERE id=?",
           [info.mpesaCode, payment.id],
         );
       } catch (e) {
-        // Unique code already used elsewhere — flag for manual review
-        if (e.code === "23505") {
-          await pool.query(
+        // Code already used elsewhere → manual review (no auto-approve).
+        if (isDuplicateKeyError(e)) {
+          await conn.query(
             "UPDATE payments SET status='review', mpesa_code=? WHERE id=?",
             [info.mpesaCode, payment.id],
           );
@@ -202,67 +206,81 @@ export const handleStkCallback = async (req, res) => {
           throw e;
         }
       }
-      await pool.query(
+
+      await conn.query(
         "UPDATE registrations SET payment_status='paid' WHERE student_id=? AND contest_id=?",
         [payment.student_id, payment.contest_id],
       );
-      await pool.query("UPDATE students SET paid=true WHERE id=?", [payment.student_id]);
+      await conn.query("UPDATE students SET paid=true WHERE id=?", [payment.student_id]);
     } else {
-      await pool.query(
+      await conn.query(
         "UPDATE payments SET status='rejected', merchant_request_id=? WHERE id=?",
         [info.merchantRequestId || null, payment.id],
       );
     }
 
+    await conn.commit();
     res.json({ ResultCode: 0, ResultDesc: "Success" });
   } catch (error) {
+    await conn.rollback().catch(() => {});
     console.error("STK CALLBACK ERROR:", error);
     res.status(500).json({ ResultCode: 1, ResultDesc: error.message });
+  } finally {
+    conn.release();
   }
 };
 
-// 🧑‍💼 ADMIN VERIFY PAYMENT
+// 🧑‍💼 ADMIN VERIFY PAYMENT — transactional so registration/payment stay consistent
 export const verifyPayment = async (req, res) => {
+  const conn = await pool.getConnection();
   try {
     const { payment_id, status } = req.body;
 
     if (!payment_id || !["paid", "rejected", "pending"].includes(status)) {
+      await conn.release();
       return res.status(400).json({ error: "payment_id and valid status required" });
     }
 
-    const updated = await pool.query(
-      "UPDATE payments SET status=? WHERE id=?",
-      [status, payment_id],
-    );
+    await conn.beginTransaction();
+    const [rows] = await conn.query("SELECT * FROM payments WHERE id=? FOR UPDATE", [payment_id]);
+    const payment = rows[0];
 
-    if (updated.rowCount === 0) {
+    if (!payment) {
+      await conn.rollback();
+      await conn.release();
       return res.status(404).json({ error: "Payment not found" });
     }
 
-    const payment = (
-      await pool.query("SELECT * FROM payments WHERE id=?", [payment_id])
-    ).rows[0];
+    await conn.query("UPDATE payments SET status=? WHERE id=?", [status, payment.id]);
 
     // sync registration + student flags
     if (payment.student_id && payment.contest_id) {
       if (status === "paid") {
-        await pool.query(
+        await conn.query(
           "UPDATE registrations SET payment_status='paid' WHERE student_id=? AND contest_id=?",
           [payment.student_id, payment.contest_id],
         );
-        await pool.query("UPDATE students SET paid=true WHERE id=?", [payment.student_id]);
+        await conn.query("UPDATE students SET paid=true WHERE id=?", [payment.student_id]);
       } else if (status === "rejected") {
-        await pool.query(
+        await conn.query(
           "UPDATE registrations SET payment_status='rejected' WHERE student_id=? AND contest_id=?",
           [payment.student_id, payment.contest_id],
         );
       }
     }
 
-    res.json({ success: true, message: "Payment updated", payment });
+    await conn.commit();
+    const fresh = (
+      await pool.query("SELECT * FROM payments WHERE id=?", [payment_id])
+    ).rows[0];
+
+    res.json({ success: true, message: "Payment updated", payment: fresh });
   } catch (error) {
+    await conn.rollback().catch(() => {});
     console.error("VERIFY PAYMENT ERROR:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Could not update payment. Please try again." });
+  } finally {
+    conn.release();
   }
 };
 

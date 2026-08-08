@@ -1,13 +1,13 @@
 
 import { useEffect, useState } from "react";
-import { apiUrl, authHeaders, getUser } from "../utils/api";
+import { apiUrl, authHeaders, fetchMe, getUser } from "../utils/api";
 import { Mail, Lock, GraduationCap } from "lucide-react";
 import { Button } from "../components/ui/Button";
 
 const GRADES = ["Grade 7", "Grade 8", "Grade 9", "Form 1", "Form 2", "Form 3", "Form 4"];
 
 export default function Settings() {
-  const me = getUser();
+  const [me, setMe] = useState(getUser());
   const [email, setEmail] = useState("");
   const [pwCurrent, setPwCurrent] = useState({ current: "", next: "", confirm: "" });
   const [emailCurrentPw, setEmailCurrentPw] = useState("");
@@ -15,6 +15,10 @@ export default function Settings() {
 
   const [grade, setGrade] = useState("");
   const [updatingGrade, setUpdatingGrade] = useState(false);
+
+  useEffect(() => {
+    fetchMe().then((u) => setMe(u));
+  }, []);
 
   useEffect(() => {
     // Load the student's current class so the selector can preselect it.

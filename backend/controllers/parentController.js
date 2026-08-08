@@ -1,8 +1,10 @@
-import pool from "../config/db.js";
+import pool, { isDuplicateKeyError } from "../config/db.js";
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
+import { sendLinkingCodeEmail } from "../utils/emailService.js";
 import {
   darajaConfigured,
   paymentAmount,
@@ -13,6 +15,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const UPLOADS_DIR = path.join(__dirname, "../uploads");
+
+const hashCode = (code) => crypto.createHash("sha256").update(String(code)).digest("hex");
 
 const requireParent = (req, res) => {
   if (req.user?.role !== "parent") {
@@ -32,7 +36,7 @@ export const getParentDashboard = async (req, res) => {
       `SELECT s.id, s.full_name, s.email, s.school, s.grade, s.parent_phone
          FROM parent_links pl
          JOIN students s ON s.id = pl.student_id
-        WHERE pl.parent_id=?
+        WHERE pl.parent_id=? AND pl.status='confirmed'
         ORDER BY s.id DESC`,
       [parentId],
     );
@@ -87,8 +91,12 @@ export const getParentDashboard = async (req, res) => {
   }
 };
 
-// 🔗 LINK CHILD — verifies the student's email, then links (no phone needed,
-// so a parent can add every child using just their account email)
+// 🔗 LINK CHILD — now requires the STUDENT'S CONSENT:
+// 1. Parent enters the student's account email.
+// 2. A 6-digit one-time code is emailed to the student's account.
+// 3. The student tells the parent the code (out of band), who confirms it
+//    via confirmLinkChild. Until then the link stays pending and the child's
+//    data is NEVER exposed to the parent.
 export const linkChild = async (req, res) => {
   try {
     if (!requireParent(req, res)) return;
@@ -110,28 +118,125 @@ export const linkChild = async (req, res) => {
       )
     ).rows[0];
     if (!stud) {
-      return res.status(404).json({ error: "No student found with that email" });
+      // Do not reveal whether the account exists.
+      return res.status(404).json({ error: "No student account could be linked. Ask your child to verify their username/email." });
+    }
+
+    const existingLink = (
+      await pool.query(
+        "SELECT status FROM parent_links WHERE parent_id=? AND student_id=?",
+        [parentId, stud.id],
+      )
+    ).rows[0];
+    if (existingLink?.status === "confirmed") {
+      return res.status(400).json({ error: "This child is already linked to your account" });
+    }
+    if (existingLink?.status === "pending") {
+      return res.status(400).json({ error: "A linking request is already pending confirmation" });
+    }
+
+    const code = String(crypto.randomInt(100000, 999999));
+    const expires = new Date(Date.now() + 30 * 60 * 1000);
+
+    // Email the student their consent code so only THEY can approve the link.
+    const emailConfigured = Boolean(
+      process.env.SMTP_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS,
+    );
+    if (!emailConfigured || !stud.email) {
+      return res.status(503).json({ error: "Linking requires a working email service. Contact support." });
     }
 
     await pool.query(
-      `INSERT INTO parent_links (parent_id, student_id) VALUES (?, ?)
-       ON DUPLICATE KEY UPDATE id=id`,
-      [parentId, stud.id],
+      `INSERT INTO parent_links (parent_id, student_id, status, link_code_hash, link_expires)
+       VALUES (?, ?, 'pending', ?, ?)
+       ON DUPLICATE KEY UPDATE
+         status='pending', link_code_hash=VALUES(link_code_hash), link_expires=VALUES(link_expires)`,
+      [parentId, stud.id, hashCode(code), expires],
     );
+
+    try {
+      await sendLinkingCodeEmail(stud.email, code, stud.full_name);
+    } catch (e) {
+      console.error("LINK CODE EMAIL ERROR:", e.message);
+      await pool.query(
+        "DELETE FROM parent_links WHERE parent_id=? AND student_id=? AND status='pending'",
+        [parentId, stud.id],
+      );
+      return res.status(500).json({ error: "Could not send the confirmation code. Please try again." });
+    }
 
     res.json({
       success: true,
-      child: {
-        id: stud.id,
-        full_name: stud.full_name,
-        email: stud.email,
-        grade: stud.grade,
-        school: stud.school,
-      },
+      pending: true,
+      message: "A confirmation code has been emailed to the student. Ask them for the 6-digit code and confirm the link below.",
     });
   } catch (error) {
     console.error("LINK CHILD ERROR:", error);
-    res.status(500).json({ error: "Could not link child. Please try again." });
+    res.status(500).json({ error: "Could not start linking. Please try again." });
+  }
+};
+
+// 🔐 CONFIRM LINK — the parent proves they have the code the child received.
+export const confirmLinkChild = async (req, res) => {
+  try {
+    if (!requireParent(req, res)) return;
+    const parentId = req.user.id;
+    const { student_email, code } = req.body;
+
+    if (!student_email || !code) {
+      return res.status(400).json({ error: "student_email and confirmation code are required" });
+    }
+    if (!/^\d{6}$/.test(String(code).trim())) {
+      return res.status(400).json({ error: "The confirmation code is 6 digits" });
+    }
+
+    const idValue = String(student_email).trim().toLowerCase();
+    const link = (
+      await pool.query(
+        `SELECT pl.*, s.email AS student_email
+         FROM parent_links pl
+         JOIN students s ON s.id = pl.student_id
+         WHERE pl.parent_id=? AND s.email=? AND pl.status='pending'
+         LIMIT 1`,
+        [parentId, idValue],
+      )
+    ).rows[0];
+
+    if (!link) {
+      return res.status(404).json({ error: "No pending link found. Start again from 'Link a child'." });
+    }
+    if (new Date(link.link_expires).getTime() < Date.now()) {
+      await pool.query("DELETE FROM parent_links WHERE id=?", [link.id]);
+      return res.status(400).json({ error: "This confirmation code has expired. Start again." });
+    }
+
+    const h = hashCode(String(code).trim());
+    const good = Buffer.from(h, "hex").length === Buffer.from(link.link_code_hash, "hex").length &&
+      crypto.timingSafeEqual(Buffer.from(h, "hex"), Buffer.from(link.link_code_hash, "hex"));
+    if (!good) {
+      return res.status(400).json({ error: "Incorrect confirmation code" });
+    }
+
+    await pool.query(
+      "UPDATE parent_links SET status='confirmed', link_code_hash=NULL, link_expires=NULL WHERE id=?",
+      [link.id],
+    );
+
+    // Return the linked child after consent.
+    const stud = (
+      await pool.query(
+        "SELECT id, full_name FROM students WHERE id=?",
+        [link.student_id],
+      )
+    ).rows[0];
+
+    res.json({
+      success: true,
+      child: { id: stud.id, full_name: stud.full_name },
+    });
+  } catch (error) {
+    console.error("CONFIRM LINK ERROR:", error);
+    res.status(500).json({ error: "Could not confirm the link. Please try again." });
   }
 };
 
@@ -171,7 +276,8 @@ export const registerChild = async (req, res) => {
     );
 
     await pool.query(
-      `INSERT INTO parent_links (parent_id, student_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE id=id`,
+      `INSERT INTO parent_links (parent_id, student_id, status) VALUES (?, ?, 'confirmed')
+       ON DUPLICATE KEY UPDATE status='confirmed'`,
       [parentId, result.insertId],
     );
 
@@ -186,11 +292,11 @@ export const registerChild = async (req, res) => {
   }
 };
 
-// 🔐 Parent must own the child before acting on their behalf
+// 🔐 Parent must own the child (confirmed link) before acting on their behalf
 const childOwned = async (res, parentId, studentId) => {
   const link = (
     await pool.query(
-      "SELECT * FROM parent_links WHERE parent_id=? AND student_id=?",
+      "SELECT * FROM parent_links WHERE parent_id=? AND student_id=? AND status='confirmed'",
       [parentId, studentId],
     )
   ).rows[0];
@@ -309,7 +415,7 @@ export const payChildManual = async (req, res) => {
         [studentId, contest.id, reg.id, String(mpesa_code).trim(), proof_text || null],
       );
     } catch (e) {
-      if (e.code === "23505") {
+      if (isDuplicateKeyError(e)) {
         return res.status(400).json({ error: "This M-PESA code has already been used" });
       }
       throw e;

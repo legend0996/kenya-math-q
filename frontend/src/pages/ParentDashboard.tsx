@@ -10,7 +10,7 @@ import { Button } from "../components/ui/Button";
 import { Card, StatCard } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
-import { apiUrl, authHeaders, getUser } from "../utils/api";
+import { apiUrl, authHeaders, fetchMe, logout } from "../utils/api";
 
 type Child = {
   id: number;
@@ -32,6 +32,7 @@ export default function ParentDashboard() {
   const [children, setChildren] = useState<Child[]>([]);
   const [contest, setContest] = useState<{ id: number; name: string; status?: string } | null>(null);
   const [parentName, setParentName] = useState("");
+  const [parentPhone, setParentPhone] = useState("");
   const [pageLoading, setPageLoading] = useState(true);
 
   const [linkEmail, setLinkEmail] = useState("");
@@ -68,12 +69,12 @@ export default function ParentDashboard() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) { navigate("/login"); return; }
-    const u = getUser();
-    if (!u?.id || u.role !== "parent") { navigate("/login"); return; }
-    setParentName(u.name || "Parent");
-    load();
+    fetchMe().then((u) => {
+      if (!u?.id || u.role !== "parent") { navigate("/login"); return; }
+      setParentName(u.name || "Parent");
+      setParentPhone(u.phone || "");
+      load();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -165,7 +166,7 @@ export default function ParentDashboard() {
       const res = await fetch(apiUrl(`/api/parent/child/${child.id}/pay-stk`), {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ phone: getUser()?.phone || "" }),
+        body: JSON.stringify({ phone: parentPhone }),
       });
       const data = await res.json();
       if (data.success) {
@@ -226,7 +227,7 @@ export default function ParentDashboard() {
           </div>
           <Button variant="ghost" icon={<LogOut size={16} />}
             className="text-red-500 hover:bg-red-50 hover:text-red-600"
-            onClick={() => { localStorage.removeItem("token"); window.location.href = "/login"; }}>
+            onClick={async () => { await logout(); window.location.href = "/login"; }}>
             Logout
           </Button>
         </div>

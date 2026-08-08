@@ -107,6 +107,16 @@ const resolveContestWindow = (contest, grade) => {
   return { start_time: contest.start_time, end_time: contest.end_time };
 };
 
+// An admin may have reopened an ended contest for a specific student so they can
+// still take it. Such a grant lets that student past the "has ended" window gate.
+const hasReopenGrant = async (student_id, contest_id) => {
+  const r = await pool.query(
+    "SELECT id FROM contest_reopens WHERE contest_id=? AND student_id=? AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1",
+    [contest_id, student_id],
+  );
+  return r.rows.length > 0;
+};
+
 // 🎯 LOAD EXAM / RESUME DRAFT (student identity from token)
 export const getExamData = async (req, res) => {
   try {
@@ -220,16 +230,17 @@ export const getExamData = async (req, res) => {
       const contestRow = contest.rows[0];
       const now = Date.now();
       const win = resolveContestWindow(contestRow, grade);
+      const reopened = await hasReopenGrant(student_id, contest_id);
       // Test contests only check the open flag (no fixed window); real contests use start/end time
       if (contestRow.is_test) {
-        if (!contestRow.test_open) {
+        if (!contestRow.test_open && !reopened) {
           return res.status(403).json({ error: "The test contest is not open" });
         }
       } else {
-        if (win.start_time && now < new Date(win.start_time).getTime()) {
+        if (win.start_time && now < new Date(win.start_time).getTime() && !reopened) {
           return res.status(403).json({ error: "The contest has not started yet" });
         }
-        if (win.end_time && now > new Date(win.end_time).getTime()) {
+        if (win.end_time && now > new Date(win.end_time).getTime() && !reopened) {
           return res.status(403).json({ error: "The contest has ended" });
         }
       }
@@ -237,10 +248,10 @@ export const getExamData = async (req, res) => {
       await pool.query(
         `INSERT INTO exam_sessions
            (student_id, contest_id, status, current_index, answers, time_remaining, total_seconds,
-            started_at, expires_at, shuffle_seed, violations)
-         VALUES (?, ?, 'draft', 0, '{}', ?, ?, ?, ?, ?, 0)`,
+            started_at, expires_at, shuffle_seed, violations, grade)
+         VALUES (?, ?, 'draft', 0, '{}', ?, ?, ?, ?, ?, 0, ?)`,
         [student_id, contest_id, totalSeconds, totalSeconds, mysqlDatetime(now),
-         mysqlDatetime(now + totalSeconds * 1000), Math.floor(Math.random() * 90000) + 10000],
+         mysqlDatetime(now + totalSeconds * 1000), Math.floor(Math.random() * 90000) + 10000, grade],
       );
       session = (
         await pool.query(
@@ -361,18 +372,19 @@ export const acceptInstructions = async (req, res) => {
     const win = resolveContestWindow(contestRow, student?.grade);
 
     const now = Date.now();
+    const reopened = await hasReopenGrant(student_id, contest_id);
     if (contestRow.is_test) {
-      if (!contestRow.test_open) {
+      if (!contestRow.test_open && !reopened) {
         return res.status(403).json({ error: "The test contest is not open" });
       }
     } else {
       if (reg.rows[0].payment_status !== "paid") {
         return res.status(403).json({ error: "Payment required before starting the exam", payment_required: true });
       }
-      if (win.start_time && now < new Date(win.start_time).getTime()) {
+      if (win.start_time && now < new Date(win.start_time).getTime() && !reopened) {
         return res.status(403).json({ error: "The contest has not started yet" });
       }
-      if (win.end_time && now > new Date(win.end_time).getTime()) {
+      if (win.end_time && now > new Date(win.end_time).getTime() && !reopened) {
         return res.status(403).json({ error: "The contest has ended" });
       }
     }
@@ -396,10 +408,10 @@ export const acceptInstructions = async (req, res) => {
       await pool.query(
         `INSERT INTO exam_sessions
            (student_id, contest_id, status, current_index, answers, time_remaining, total_seconds,
-            started_at, expires_at, shuffle_seed, violations, instructions_accepted)
-         VALUES (?, ?, 'draft', 0, '{}', ?, ?, ?, ?, ?, 0, 1)`,
+            started_at, expires_at, shuffle_seed, violations, instructions_accepted, grade)
+         VALUES (?, ?, 'draft', 0, '{}', ?, ?, ?, ?, ?, 0, 1, ?)`,
         [student_id, contest_id, totalSeconds, totalSeconds, mysqlDatetime(now),
-         mysqlDatetime(now + totalSeconds * 1000), Math.floor(Math.random() * 90000) + 10000],
+         mysqlDatetime(now + totalSeconds * 1000), Math.floor(Math.random() * 90000) + 10000, student?.grade],
       );
     }
 
@@ -459,57 +471,86 @@ export const saveDraft = async (req, res) => {
 
 // ✅ SUBMIT EXAM + AUTO GRADING (student identity from token)
 export const submitExam = async (req, res) => {
+  const conn = await pool.getConnection();
   try {
     const { contest_id, answers } = req.body;
     const student_id = req.user.id;
 
     if (!contest_id || !Array.isArray(answers)) {
+      await conn.release();
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const student = await pool.query(
-      "SELECT grade FROM students WHERE id=?",
-      [student_id],
-    );
-    if (student.rows.length === 0) {
-      return res.status(404).json({ error: "Student not found" });
-    }
-    const grade = student.rows[0].grade;
+    await conn.beginTransaction();
 
-    const contestRow = (await pool.query("SELECT is_test FROM contests WHERE id=?", [contest_id])).rows[0];
+    // 🔒 Lock the exam session row for this student+contest so a second
+    // concurrent submission waits for the first to finish, then sees the
+    // result already exists and is rejected.
+    const [sessRows] = await conn.query(
+      "SELECT * FROM exam_sessions WHERE student_id=? AND contest_id=? FOR UPDATE",
+      [student_id, contest_id],
+    );
+    const session = sessRows[0];
+
+    // The grade is SNAPSHOTTED at session creation so a mid-exam grade change
+    // can never silently re-target the paper the student actually sat.
+    let grade;
+    if (session?.grade) {
+      grade = session.grade;
+    } else {
+      const [sRows] = await conn.query("SELECT grade FROM students WHERE id=?", [student_id]);
+      grade = sRows[0]?.grade;
+      if (!grade) {
+        await conn.rollback();
+        await conn.release();
+        return res.status(404).json({ error: "Student not found" });
+      }
+      // Backfill the snapshot for sessions created before the column existed.
+      if (session) {
+        await conn.query("UPDATE exam_sessions SET grade=? WHERE id=?", [grade, session.id]);
+      }
+    }
+
+    const [contestRows] = await conn.query("SELECT is_test FROM contests WHERE id=?", [contest_id]);
+    const contestRow = contestRows[0];
 
     // 🔒 Payment gate (test contests are auto-approved)
-    const reg = await pool.query(
+    const [regRows] = await conn.query(
       "SELECT * FROM registrations WHERE student_id=? AND contest_id=?",
       [student_id, contest_id],
     );
-    if (reg.rows.length === 0) {
+    const reg = regRows[0];
+    if (!reg) {
+      await conn.rollback();
+      await conn.release();
       return res.status(403).json({ error: "Register for the contest first" });
     }
-    if (!contestRow?.is_test && reg.rows[0].payment_status !== "paid") {
+    if (!contestRow?.is_test && reg.payment_status !== "paid") {
+      await conn.rollback();
+      await conn.release();
       return res.status(403).json({ error: "Payment required before submitting" });
     }
 
-    // 🚫 Prevent multiple submissions
-    const existing = await pool.query(
+    // 🚫 Prevent multiple submissions (checked again under the row lock)
+    const [existing] = await conn.query(
       "SELECT * FROM results WHERE student_id=? AND contest_id=?",
       [student_id, contest_id],
     );
-    if (existing.rows.length > 0) {
+    if (existing.length > 0) {
+      await conn.rollback();
+      await conn.release();
       return res.status(400).json({ error: "You already submitted this exam" });
     }
 
     // ⏰ Server-side time enforcement
-    const session = await pool.query(
-      "SELECT * FROM exam_sessions WHERE student_id=? AND contest_id=?",
-      [student_id, contest_id],
-    );
-    const expiresMs = session.rows[0]?.expires_at
-      ? new Date(session.rows[0].expires_at).getTime()
+    const expiresMs = session?.expires_at
+      ? new Date(session.expires_at).getTime()
       : null;
     if (expiresMs != null) {
       const nowMs = Date.now();
       if (nowMs > expiresMs + SUBMIT_GRACE_SECONDS * 1000) {
+        await conn.rollback();
+        await conn.release();
         return res.status(410).json({
           success: false,
           expired: true,
@@ -518,13 +559,13 @@ export const submitExam = async (req, res) => {
       }
     }
 
-    // Questions with answers + marks for this grade
-    const qRes = await pool.query(
+    // Questions with answers + marks for THIS GRADE SNAPSHOT
+    const [qRows] = await conn.query(
       `SELECT id, correct_answer, marks FROM questions
        WHERE contest_id=? AND grade=?`,
       [contest_id, grade],
     );
-    const questionMap = new Map(qRes.rows.map((q) => [q.id, q]));
+    const questionMap = new Map(qRows.map((q) => [q.id, q]));
 
     // 💾 Save answers (only for questions in this grade) — includes finger-written working
     const cleanAnswers = [];
@@ -542,7 +583,7 @@ export const submitExam = async (req, res) => {
       cleanAnswers.push([student_id, contest_id, ans.question_id, String(ans.answer).slice(0, 5000), working, String(ans.answer).slice(0, 5000)]);
     }
     for (const row of cleanAnswers) {
-      await pool.query(
+      await conn.query(
         `INSERT INTO answers (student_id, contest_id, question_id, answer, working, final_answer)
          VALUES (?, ?, ?, ?, ?, ?)`,
         row,
@@ -554,25 +595,44 @@ export const submitExam = async (req, res) => {
     // Manual contests: answers are saved but an admin marks them later.
     const mode = await getMarkingMode(contest_id);
     if (mode === "manual") {
-      await finalizeManualSession(student_id, contest_id, timedOut);
+      await conn.query(
+        `INSERT INTO results (student_id, contest_id, score, marked, completed, timed_out, reviewable)
+         VALUES (?, ?, 0, 0, true, ?, 0)
+         ON DUPLICATE KEY UPDATE marked=0, completed=true, timed_out=VALUES(timed_out), reviewable=0`,
+        [student_id, contest_id, timedOut],
+      );
+      await conn.query(
+        "UPDATE exam_sessions SET status='submitted', updated_at=NOW() WHERE student_id=? AND contest_id=?",
+        [student_id, contest_id],
+      );
+      await conn.commit();
+      await conn.release();
       return res.json({ success: true, graded: false, timed_out: timedOut, message: "Answers submitted — your paper will be marked manually." });
     }
 
     const answerMap = {};
     for (const row of cleanAnswers) answerMap[row[2]] = row[3];
 
-    const { score, grade: gradeText, total } = await finalizeSession(
-      student_id,
-      contest_id,
-      qRes.rows,
-      answerMap,
-      timedOut,
+    const { score, grade: gradeText, total } = scoreAnswers(qRows, answerMap);
+    await conn.query(
+      `INSERT INTO results (student_id, contest_id, score, grade, completed, timed_out)
+       VALUES (?, ?, ?, ?, true, ?)
+       ON DUPLICATE KEY UPDATE score=VALUES(score), grade=VALUES(grade), completed=true, timed_out=VALUES(timed_out)`,
+      [student_id, contest_id, score, gradeText, timedOut],
+    );
+    await conn.query(
+      "UPDATE exam_sessions SET status='submitted', updated_at=NOW() WHERE student_id=? AND contest_id=?",
+      [student_id, contest_id],
     );
 
+    await conn.commit();
+    await conn.release();
     res.json({ success: true, score, grade: gradeText, total, timed_out: timedOut });
   } catch (error) {
+    await conn.rollback().catch(() => {});
+    await conn.release();
     console.error("SUBMIT ANSWERS ERROR:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Could not submit the exam. Please try again." });
   }
 };
 
@@ -610,7 +670,7 @@ export const getMyResults = async (req, res) => {
 // Finalizes draft sessions whose timer already ran out, so nobody gets extra time.
 export const finalizeExpiredDrafts = async () => {
   const sessions = await pool.query(
-    `SELECT student_id, contest_id, answers FROM exam_sessions
+    `SELECT student_id, contest_id, answers, grade FROM exam_sessions
      WHERE status='draft' AND expires_at IS NOT NULL AND expires_at < DATE_SUB(NOW(), INTERVAL 130 SECOND)
      LIMIT 500`,
   );
@@ -635,7 +695,7 @@ export const finalizeExpiredDrafts = async () => {
         "SELECT grade FROM students WHERE id=?",
         [s.student_id],
       );
-      const grade = gradeRes.rows[0]?.grade;
+      let grade = s.grade || gradeRes.rows[0]?.grade;
       if (!grade) continue;
 
       const qRes = await pool.query(

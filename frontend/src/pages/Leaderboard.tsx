@@ -4,7 +4,7 @@ import { Trophy, Medal, Globe, School, BookOpen, Star } from "lucide-react";
 import { Badge } from "../components/ui/Badge";
 import { Card } from "../components/ui/Card";
 import { PageSpinner } from "../components/ui/Spinner";
-import { apiUrl, getUser } from "../utils/api";
+import { apiUrl, fetchMe } from "../utils/api";
 
 type Leader = {
   id: number;
@@ -35,7 +35,6 @@ export default function Leaderboard() {
   const [contestId, setContestId] = useState<number | null>(null);
 
   useEffect(() => {
-    const user = getUser();
     fetch(apiUrl("/api/contest/current"))
       .then((r) => r.json())
       .then(async (d) => {
@@ -43,6 +42,7 @@ export default function Leaderboard() {
         setContestId(id);
         if (!id) return;
         let url = apiUrl(`/api/leaderboard?contest_id=${id}`);
+        const user = await fetchMe();
         if (user?.id)     url += `&student_id=${user.id}`;
         if (type === "school" && user?.school) url += `&type=school&school=${encodeURIComponent(user.school)}`;
         if (type === "class"  && user?.grade)  url += `&type=class&grade=${encodeURIComponent(user.grade)}`;

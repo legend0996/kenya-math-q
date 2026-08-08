@@ -836,6 +836,17 @@ export const setContestGradeSchedule = async (req, res) => {
   }
 };
 
+// 🧹 Wipe an attempt for a set of students in one contest so it can be redone.
+// Removes answers, per-question marks, the draft session, any result and certificate.
+const clearAttemptForStudents = async (contest_id, ids) => {
+  const placeholders = ids.map(() => "?").join(",");
+  await pool.query(`DELETE FROM answers WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+  await pool.query(`DELETE FROM question_marks WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+  await pool.query(`DELETE FROM exam_sessions WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+  await pool.query(`DELETE FROM results WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+  await pool.query(`DELETE FROM certificates WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+};
+
 // 🔁 RESET A STUDENT'S ATTEMPT SO THEY CAN REPEAT THE EXAM
 // Wipes answers, per-question marks, the draft session and any old result/certificate.
 export const resetStudentResults = async (req, res) => {
@@ -847,17 +858,107 @@ export const resetStudentResults = async (req, res) => {
     }
 
     const ids = [...new Set(student_ids.map((x) => Number(x)))].filter((x) => Number.isFinite(x));
-    const placeholders = ids.map(() => "?").join(",");
-
-    await pool.query(`DELETE FROM answers WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
-    await pool.query(`DELETE FROM question_marks WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
-    await pool.query(`DELETE FROM exam_sessions WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
-    await pool.query(`DELETE FROM results WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
-    await pool.query(`DELETE FROM certificates WHERE contest_id=? AND student_id IN (${placeholders})`, [contest_id, ...ids]);
+    await clearAttemptForStudents(contest_id, ids);
 
     res.json({ success: true, count: ids.length, message: `${ids.length} student(s) can now retake the exam` });
   } catch (error) {
     console.error("RESET RESULT ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 🕓 A student who missed an already-ended contest can still take it: grant them
+// a personal extension window (contest_reopens). The exam gates check this table
+// and skip the "The contest has ended" error for that student.
+export const reopenContestForStudents = async (req, res) => {
+  try {
+    const { contest_id, student_ids } = req.body;
+    const days = Math.max(1, Math.min(Number(req.body.days) || 7, 365));
+
+    if (!contest_id || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({ error: "contest_id and student_ids[] required" });
+    }
+
+    const ids = [...new Set(student_ids.map((x) => Number(x)))].filter((x) => Number.isFinite(x));
+    if (ids.length === 0) return res.status(400).json({ error: "No valid student ids" });
+
+    // A reopened contest lets the student start again from scratch.
+    await clearAttemptForStudents(contest_id, ids);
+
+    // Ensure the student is registered & marked paid for this contest — otherwise
+    // the exam gate ("Register for the contest first" / "Payment required") would
+    // still stop them even though the admin reopened the window.
+    const regValues = ids.map(() => "(?, ?, 'paid')").join(", ");
+    const regParams = [];
+    for (const id of ids) regParams.push(contest_id, id);
+    await pool.query(
+      `INSERT INTO registrations (contest_id, student_id, payment_status)
+       VALUES ${regValues}
+       ON DUPLICATE KEY UPDATE payment_status='paid'`,
+      regParams,
+    );
+    if (ids.length > 0) {
+      const placeholders = ids.map(() => "?").join(",");
+      await pool.query(`UPDATE students SET registered=true WHERE id IN (${placeholders})`, ids);
+    }
+
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+      .toISOString().slice(0, 19).replace("T", " ");
+
+    const placeholders = ids.map(() => "(?, ?, ?, ?)").join(", ");
+    const params = [];
+    for (const id of ids) {
+      params.push(contest_id, id, req.owner.id, expiresAt);
+    }
+    await pool.query(
+      `INSERT INTO contest_reopens (contest_id, student_id, opened_by, expires_at)
+       VALUES ${placeholders}
+       ON DUPLICATE KEY UPDATE opened_by=VALUES(opened_by), expires_at=VALUES(expires_at)`,
+      params,
+    );
+
+    res.json({ success: true, count: ids.length, expires_at: expiresAt, message: `${ids.length} student(s) can now take the contest` });
+  } catch (error) {
+    console.error("REOPEN CONTEST ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 📋 List students currently granted access to a contest for reopening
+export const getContestReopens = async (req, res) => {
+  try {
+    const { contest_id } = req.params;
+    const r = await pool.query(
+      `SELECT cr.contest_id, cr.student_id, s.full_name, s.school, s.grade, cr.expires_at
+       FROM contest_reopens cr
+       JOIN students s ON s.id = cr.student_id
+       WHERE cr.contest_id=?`,
+      [contest_id],
+    );
+    res.json({ success: true, reopens: r.rows });
+  } catch (error) {
+    console.error("GET REOPENS ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 🚫 Remove a student's reopen grant (they lose the after-window access).
+export const revokeContestReopen = async (req, res) => {
+  try {
+    const { contest_id, student_ids } = req.body;
+    if (!contest_id || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({ error: "contest_id and student_ids[] required" });
+    }
+    const ids = [...new Set(student_ids.map((x) => Number(x)))].filter((x) => Number.isFinite(x));
+    const placeholders = ids.map(() => "?").join(",");
+    await pool.query(
+      `DELETE FROM contest_reopens WHERE contest_id=? AND student_id IN (${placeholders})`,
+      [contest_id, ...ids],
+    );
+
+    res.json({ success: true, count: ids.length, message: `${ids.length} reopen grant(s) removed` });
+  } catch (error) {
+    console.error("REVOKE REOPEN ERROR:", error);
     res.status(500).json({ error: error.message });
   }
 };

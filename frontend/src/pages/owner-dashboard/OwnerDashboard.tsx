@@ -22,7 +22,7 @@ import AssistantManager from "./assistant";
 import RegistrationsManager from "./registrations";
 import QuestionsManager from "./questions";
 import ParentsManager from "./parents";
-import { apiUrl, authHeaders, getToken } from "../../utils/api";
+import { apiUrl, authHeaders, logout, fetchMe } from "../../utils/api";
 
 type Tab = "overview" | "schools" | "contests" | "questions" | "payments" | "parents" | "results" | "certificates" | "test" | "admins" | "support" | "marking" | "instructions" | "materials" | "assistant";
 
@@ -105,8 +105,10 @@ export default function OwnerDashboard() {
   };
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) { window.location.href = "/owner-login-7843-secure"; return; }
+    fetchMe().then((u) => {
+      if (!u?.id || u.role !== "owner") { window.location.href = "/owner-login-7843-secure"; return; }
+      setAdminName(u.name || "");
+    });
 
     Promise.all([
       fetch(apiUrl("/api/owner/stats"), { headers: authHeaders() }).then((r) => r.json()),
@@ -295,7 +297,7 @@ export default function OwnerDashboard() {
           </div>
           <Button variant="ghost" icon={<LogOut size={16} />}
             className="text-red-500 hover:bg-red-50 hover:text-red-600"
-            onClick={() => { localStorage.removeItem("token"); window.location.href = "/owner-login-7843-secure"; }}>
+            onClick={async () => { await logout(); window.location.href = "/owner-login-7843-secure"; }}>
             Logout
           </Button>
         </div>

@@ -166,9 +166,21 @@ export const getMyContestStatus = async (req, res) => {
   try {
     const student_id = req.user.id;
 
-    const contestRes = await pool.query(
-      "SELECT * FROM contests WHERE registration_open=true ORDER BY start_time DESC LIMIT 1",
+    // Prefer a contest the admin has reopened for this student (they missed the
+    // window but were granted a personal extension), otherwise the current one.
+    const reopenedRes = await pool.query(
+      `SELECT c.* FROM contest_reopens cr
+       JOIN contests c ON c.id = cr.contest_id
+       WHERE cr.student_id=? AND (cr.expires_at IS NULL OR cr.expires_at > NOW())
+       ORDER BY cr.opens_at DESC LIMIT 1`,
+      [student_id],
     );
+
+    const contestRes = reopenedRes.rows.length > 0
+      ? { rows: reopenedRes.rows }
+      : await pool.query(
+          "SELECT * FROM contests WHERE registration_open=true ORDER BY start_time DESC LIMIT 1",
+        );
 
     if (contestRes.rows.length === 0) {
       return res.json({ success: true, contest: null });
@@ -215,6 +227,13 @@ export const getMyContestStatus = async (req, res) => {
         )
       ).rows[0];
 
+      const reopen = (
+        await pool.query(
+          "SELECT id FROM contest_reopens WHERE contest_id=? AND student_id=? AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1",
+          [contest.id, student_id],
+        )
+      ).rows[0];
+
       res.json({
         success: true,
         contest: {
@@ -226,11 +245,13 @@ export const getMyContestStatus = async (req, res) => {
           end_time,
           status,
           results_released: contest.results_released,
+          reopened: !!reopen,
         },
         registered: !!reg,
         payment_status: reg?.payment_status || null,
         result,
         has_draft: !!session && session.status === "draft",
+        reopened: !!reopen,
       });
   } catch (error) {
     console.error("MY CONTEST STATUS ERROR:", error);

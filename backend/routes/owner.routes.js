@@ -38,6 +38,9 @@ import {
   markStudentsPaid,
   setContestGradeSchedule,
   resetStudentResults,
+  reopenContestForStudents,
+  getContestReopens,
+  revokeContestReopen,
 } from "../controllers/owner.controller.js";
 import {
   getMarkableContests,
@@ -139,6 +142,11 @@ router.post("/students/register", verifyOwner, requirePermission("manage_contest
 router.post("/students/mark-paid", verifyOwner, requirePermission("manage_contests"), markStudentsPaid);
 router.post("/contest/grade-schedule", verifyOwner, requirePermission("manage_contests"), setContestGradeSchedule);
 router.post("/result/reset", verifyOwner, requirePermission("manage_results"), resetStudentResults);
+
+// 🔓 REOPEN AN ENDED CONTEST FOR SPECIFIC STUDENTS (they missed the window)
+router.post("/contest/reopen", verifyOwner, requirePermission("manage_results"), reopenContestForStudents);
+router.get("/contest/:contest_id/reopens", verifyOwner, getContestReopens);
+router.post("/contest/reopen/revoke", verifyOwner, requirePermission("manage_results"), revokeContestReopen);
 
 // 👥 MULTI-ADMIN
 router.get("/admin/list", verifyOwner, getOwners);

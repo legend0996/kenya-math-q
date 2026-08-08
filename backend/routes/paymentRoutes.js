@@ -8,7 +8,7 @@ import {
   getPendingPayments,
   getPaymentMethods,
 } from "../controllers/paymentController.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyToken, requireStudent } from "../middleware/authMiddleware.js";
 import { verifyOwner } from "../middleware/ownerAuth.js";
 
 const router = express.Router();
@@ -18,8 +18,8 @@ router.get("/methods", getPaymentMethods);
 router.post("/stk/callback", express.json({ type: "*/*" }), handleStkCallback);
 
 // Student
-router.post("/submit-proof", verifyToken, submitPaymentProof);
-router.post("/stk", verifyToken, initiateStkPush);
+router.post("/submit-proof", verifyToken, requireStudent, submitPaymentProof);
+router.post("/stk", verifyToken, requireStudent, initiateStkPush);
 
 // Admin
 router.post("/verify", verifyOwner, verifyPayment);

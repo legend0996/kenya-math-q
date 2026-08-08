@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { apiUrl } from "../utils/api";
+import { apiUrl, setUser } from "../utils/api";
 import { LogIn, GraduationCap, School, Users, Eye, EyeOff, User, KeyRound, ArrowLeft } from "lucide-react";
 import Image from "../components/Image";
 import { Button } from "../components/ui/Button";
@@ -74,8 +74,9 @@ export default function Login() {
       });
       const data = await res.json();
 
-      if (data.success) {
-        localStorage.setItem("token", data.token);
+      if (data.success || data.token) {
+        // Session lives in an httpOnly cookie — do NOT store the JWT in localStorage.
+        if (data.user) setUser({ id: data.user.id, role: data.user.role, name: data.user.name, school: data.user.school, grade: data.user.grade });
         window.location.href =
           type === "school" ? "/school-dashboard"
           : type === "parent" ? "/parent-dashboard"

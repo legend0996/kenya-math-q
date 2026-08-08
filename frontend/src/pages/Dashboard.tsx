@@ -11,11 +11,11 @@ import { Button } from "../components/ui/Button";
 import { Card, StatCard } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { PageSpinner } from "../components/ui/Spinner";
-import { apiUrl, authHeaders, getUser } from "../utils/api";
+import { apiUrl, authHeaders, fetchMe, logout } from "../utils/api";
 import { THEMES, type Theme, themeByColor, applyTheme, emitThemeChange, readSavedTheme } from "../theme";
 
 type User = { id?: number; name?: string; school?: string };
-type Contest = { id: number; name: string; status: string; start_time: string; results_released?: boolean; is_test?: boolean };
+type Contest = { id: number; name: string; status: string; start_time: string; results_released?: boolean; is_test?: boolean; reopened?: boolean };
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -78,12 +78,11 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) { navigate("/login"); return; }
-    const u = getUser();
-    if (!u?.id) { navigate("/login"); return; }
-    setUser({ id: u.id, name: u.name || u.school || "Student", school: u.school });
-    load();
+    fetchMe().then((u) => {
+      if (!u?.id) { navigate("/login"); return; }
+      setUser({ id: u.id, name: u.name || u.school || "Student", school: u.school });
+      load();
+    });
   }, [navigate, load]);
 
   const showFeedback = (type: "success" | "error", msg: string) => {
@@ -207,9 +206,9 @@ export default function Dashboard() {
     window.open(apiUrl(`/api/certificate/my/download/${id}`));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
+const handleLogout = async () => {
+    await logout();
+    window.location.href = "/login";
   };
 
   if (pageLoading) return <PageSpinner message="Loading your dashboard…" />;
@@ -217,6 +216,7 @@ export default function Dashboard() {
   const paid = paymentStatus === "paid";
   const live = contest?.status === "live";
   const upcoming = contest?.status === "upcoming";
+  const reopened = !!contest?.reopened;
 
   return (
     <main className="pt-16 min-h-screen bg-slate-50">
@@ -305,7 +305,8 @@ export default function Dashboard() {
                   <div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-bold text-slate-900 text-lg">{contest.name}</h3>
-                      {live ? <Badge variant="success" dot>Live</Badge>
+                      {reopened ? <Badge variant="info">Reopened for you</Badge>
+                        : live ? <Badge variant="success" dot>Live</Badge>
                         : upcoming ? <Badge variant="info">Upcoming</Badge>
                         : <Badge variant="default">Ended</Badge>}
                     </div>
@@ -355,6 +356,10 @@ export default function Dashboard() {
                         </p>
                       ) : live && paid ? (
                         <p className="text-sm text-slate-500 mt-1">The contest is live. {hasDraft ? "Your draft is saved — resume anytime." : "Ready when you are."}</p>
+                      ) : reopened && paid ? (
+                        <p className="text-sm text-violet-600 font-medium mt-1 flex items-center gap-1">
+                          <Clock size={13} /> This contest was reopened for you — you can sit it now.
+                        </p>
                       ) : live && !paid ? (
                         <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
                           <Lock size={13} />{" "}
@@ -386,9 +391,9 @@ export default function Dashboard() {
                           </Button>
                         )}
                       </div>
-                    ) : live && paid ? (
+                    ) : (live || reopened) && paid ? (
                       <Button size="lg" icon={<Play size={16} />} onClick={() => navigate(`/exam?contest_id=${contest.id}`)}>
-                        {hasDraft ? "Continue Exam" : "Start Exam"}
+                        {hasDraft ? "Continue Exam" : reopened ? "Take Exam Now" : "Start Exam"}
                       </Button>
                     ) : live && !paid ? (
                       <Button size="lg" disabled className="opacity-50">

@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { apiUrl } from "../utils/api";
+import { apiUrl, setUser } from "../utils/api";
 import { LogIn, Eye, EyeOff, Shield } from "lucide-react";
 import { Button } from "../components/ui/Button";
 
@@ -25,7 +25,8 @@ export default function OwnerLogin() {
       const data = await res.json();
 
       if (data.token) {
-        localStorage.setItem("token", data.token);
+        // Session lives in an httpOnly cookie — do NOT store the JWT in localStorage.
+        if (data.owner) setUser({ id: data.owner.id, role: "owner", name: data.owner.name, email: data.owner.email });
         window.location.href = "/owner-dashboard";
       } else {
         setError(data.error || "Invalid credentials");

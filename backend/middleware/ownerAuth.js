@@ -4,14 +4,19 @@ import pool from "../config/db.js";
 export const verifyOwner = async (req, res, next) => {
   try {
     const auth = req.headers.authorization;
-    if (!auth) {
+    let token;
+    if (auth && auth.startsWith("Bearer ")) {
+      token = auth.split(" ")[1];
+    } else if (req.cookies?.token) {
+      token = req.cookies.token;
+    }
+    if (!token) {
       return res.status(401).json({ error: "No token" });
     }
 
-    const token = auth.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Promoted student admins get role "owner" in their token, but live in `students`.
+    // Promoted owners get role "owner" in their token, but live in `students`.
     if (decoded.role === "admin") decoded.role = "owner";
 
     if (decoded.role !== "owner") {

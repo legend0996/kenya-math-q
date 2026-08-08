@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { PageSpinner } from "../components/ui/Spinner";
-import { apiUrl, authHeaders, getToken } from "../utils/api";
+import { apiUrl, authHeaders, fetchMe } from "../utils/api";
 
 type Question = {
   id: number;
@@ -68,8 +68,7 @@ export default function Exam() {
   contestIdRef.current = contestId;
 
   const saveDraft = useCallback(async (options?: { silent?: boolean }) => {
-    const token = getToken();
-    if (!token || !startedRef.current || contestIdRef.current == null) return;
+    if (!startedRef.current || contestIdRef.current == null) return;
     const now = Date.now();
     if (now - lastSaveRef.current < 400 && options?.silent !== false) return;
     lastSaveRef.current = now;
@@ -223,28 +222,29 @@ export default function Exam() {
   }, [contestId, loadExam]);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      window.location.href = "/login";
-      return;
-    }
+    fetchMe().then((u) => {
+      if (!u?.id) {
+        window.location.href = "/login";
+        return;
+      }
 
-    const param = new URLSearchParams(window.location.search).get("contest_id");
-    if (param) {
-      loadExam(Number(param));
-    } else {
-      fetch(apiUrl("/api/contest/current"))
-        .then((r) => r.json())
-        .then((d) => {
-          const id = d?.success && d?.id ? Number(d.id) : null;
-          if (!id) {
-            setPhase({ name: "blocked", reason: "No active contest right now." });
-            return;
-          }
-          loadExam(id);
-        })
-        .catch(() => setPhase({ name: "blocked", reason: "Connection error. Please try again." }));
-    }
+      const param = new URLSearchParams(window.location.search).get("contest_id");
+      if (param) {
+        loadExam(Number(param));
+      } else {
+        fetch(apiUrl("/api/contest/current"))
+          .then((r) => r.json())
+          .then((d) => {
+            const id = d?.success && d?.id ? Number(d.id) : null;
+            if (!id) {
+              setPhase({ name: "blocked", reason: "No active contest right now." });
+              return;
+            }
+            loadExam(id);
+          })
+          .catch(() => setPhase({ name: "blocked", reason: "Connection error. Please try again." }));
+      }
+    });
   }, [loadExam]);
 
   // Timer

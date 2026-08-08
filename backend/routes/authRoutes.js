@@ -1,5 +1,5 @@
 import express from "express";
-import { authLimiter, loginLimiter } from "../middleware/authMiddleware.js";
+import { authLimiter, loginLimiter, resetLimiter } from "../middleware/authMiddleware.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { verifyOwner } from "../middleware/ownerAuth.js";
 import {
@@ -11,6 +11,7 @@ import {
   loginSchool,
   loginParent,
   logout,
+  getMe,
   changePassword,
   changeEmail,
   requestPasswordReset,
@@ -36,9 +37,12 @@ router.post("/change-email", verifyToken, changeEmail);
 router.post("/owner/change-password", verifyOwner, changePassword);
 router.post("/owner/change-email", verifyOwner, changeEmail);
 
+// CURRENT USER (verified via httpOnly cookie or Bearer token)
+router.get("/me", verifyToken, getMe);
+
 // PASSWORD RESET (public, code emailed — 15 min expiry)
-router.post("/forgot", authLimiter, requestPasswordReset);
-router.post("/reset", authLimiter, resetPassword);
+router.post("/forgot", resetLimiter, requestPasswordReset);
+router.post("/reset", resetLimiter, resetPassword);
 
 // LOGOUT (clears httpOnly cookie)
 router.post("/logout", logout);

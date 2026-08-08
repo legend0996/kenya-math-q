@@ -47,7 +47,6 @@ export default function MaterialsManager() {
     try {
       const res = await fetch(apiUrl("/api/owner/materials/upload"), {
         method: "POST",
-        headers: { Authorization: authHeaders().Authorization },
         body: fd,
       });
       const d = await res.json();

@@ -34,9 +34,22 @@ export const sendCertificateEmail = async (to, password) => {
   });
 };
 
+export const sendLinkingCodeEmail = async (to, code, childName) => {
+  if (!transporter) {
+    console.warn("⚠ Email not configured — linking confirmation email skipped");
+    return;
+  }
+  await transporter.sendMail({
+    from: `"${name}" <${from}>`,
+    to,
+    subject: "Kenya Math Quest — Confirm Parent Link",
+    text: `Dear ${childName || "Student"},\n\nA parent is trying to link your account to theirs.\n\nTo approve the link, share this 6-digit code with them:\n\n  ${code}\n\nIt expires in 30 minutes. If you did not ask for this, ignore this email.\n\nThank you,\n${name}`,
+  });
+};
+
 export const sendPasswordResetEmail = async (to, code, recipientName, role) => {
   if (!transporter) {
-    console.warn(`⚠ Email not configured — password reset code for ${to} is: ${code}`);
+    console.warn(`⚠ Email not configured — password reset email for ${to} was skipped`);
     return;
   }
   await transporter.sendMail({

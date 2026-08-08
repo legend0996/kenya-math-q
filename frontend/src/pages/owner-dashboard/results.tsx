@@ -5,7 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { apiUrl, authHeaders, downloadAuthorized } from "../../utils/api";
 import { PageSpinner } from "../../components/ui/Spinner";
-import { Download, RotateCcw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Download, RotateCcw, Unlock, XCircle, AlertCircle, CheckCircle2 } from "lucide-react";
 
 type ContestRow = { id: number; name: string; year: number; results_status?: string };
 type Participant = {
@@ -33,6 +33,15 @@ export default function ResultsManagement() {
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [resetting, setResetting] = useState(false);
 
+  // Reopen (ended contest, missed by student)
+  const [reopenContestId, setReopenContestId] = useState<number | null>(null);
+  const [reopenDays, setReopenDays] = useState(7);
+  const [reopenParts, setReopenParts] = useState<Participant[]>([]);
+  const [loadingReopen, setLoadingReopen] = useState(false);
+  const [reopenChecked, setReopenChecked] = useState<Set<number>>(new Set());
+  const [reopening, setReopening] = useState(false);
+  const [reopenGrants, setReopenGrants] = useState<{ student_id: number; full_name: string; expires_at?: string }[]>([]);
+
   const showFeedback = (type: "success" | "error", msg: string) => {
     setFeedback({ type, msg });
     setTimeout(() => setFeedback(null), 3500);
@@ -45,6 +54,7 @@ export default function ResultsManagement() {
         if (d.success) {
           setContests(d.contests || []);
           setRetakeContestId((id) => id ?? d.contests?.[0]?.id ?? null);
+          setReopenContestId((id) => id ?? d.contests?.[0]?.id ?? null);
         }
       })
       .finally(() => setLoading(false));
@@ -105,6 +115,86 @@ export default function ResultsManagement() {
       showFeedback("error", "Failed to reset attempts");
     } finally {
       setResetting(false);
+    }
+  };
+
+  const loadReopen = async (contestId: number) => {
+    setLoadingReopen(true);
+    try {
+      const [p, g] = await Promise.all([
+        fetch(apiUrl(`/api/owner/contest/${contestId}/participants`), { headers: authHeaders() }).then((r) => r.json()),
+        fetch(apiUrl(`/api/owner/contest/${contestId}/reopens`), { headers: authHeaders() }).then((r) => r.json()),
+      ]);
+      setReopenParts(p.participants || []);
+      setReopenGrants(g.reopens || []);
+    } catch {
+      setReopenParts([]);
+      setReopenGrants([]);
+    } finally {
+      setLoadingReopen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (reopenContestId) loadReopen(reopenContestId);
+  }, [reopenContestId]);
+
+  const reopenedIds = new Set(reopenGrants.map((g) => g.student_id));
+
+  const toggleReopenAll = () => {
+    const eligible = reopenParts.filter((p) => !reopenedIds.has(p.id));
+    setReopenChecked(new Set(eligible.map((p) => p.id)));
+  };
+
+  const toggleReopenOne = (id: number) => {
+    const next = new Set(reopenChecked);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setReopenChecked(next);
+  };
+
+  const openContest = async () => {
+    if (!reopenContestId || reopenChecked.size === 0) return;
+    const ids = [...reopenChecked];
+    setReopening(true);
+    try {
+      const r = await fetch(apiUrl("/api/owner/contest/reopen"), {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ contest_id: reopenContestId, student_ids: ids, days: reopenDays }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        showFeedback("success", d.message || "Contest reopened for the selected students");
+        setReopenChecked(new Set());
+        loadReopen(reopenContestId);
+      } else {
+        showFeedback("error", d.error || "Failed to reopen the contest");
+      }
+    } catch {
+      showFeedback("error", "Failed to reopen the contest");
+    } finally {
+      setReopening(false);
+    }
+  };
+
+  const revokeOpen = async (studentId: number) => {
+    if (!reopenContestId) return;
+    try {
+      const r = await fetch(apiUrl("/api/owner/contest/reopen/revoke"), {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ contest_id: reopenContestId, student_ids: [studentId] }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        showFeedback("success", "Reopen access revoked");
+        loadReopen(reopenContestId);
+      } else {
+        showFeedback("error", d.error || "Failed to revoke access");
+      }
+    } catch {
+      showFeedback("error", "Failed to revoke access");
     }
   };
 
@@ -263,6 +353,120 @@ export default function ResultsManagement() {
               </div>
               <div className="px-6 py-3 text-xs text-slate-400">
                 {checked.size} selected · {doneList.length} completed
+              </div>
+            </>
+          )}
+        </Card>
+
+        {/* ── Reopen an ENDED contest for specific students (they missed it) ── */}
+        <Card padding="none">
+          <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold text-slate-900 flex items-center gap-2">
+                <Unlock size={18} className="text-violet-600" /> Reopen Ended Contest
+              </h2>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Grant a student who missed a contest that has already ended the chance to sit it now.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={reopenContestId ?? ""}
+                onChange={(e) => setReopenContestId(Number(e.target.value))}
+                className="px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-100 outline-none transition-all"
+              >
+                {contests.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <input
+                type="number" min={1} max={365} value={reopenDays}
+                onChange={(e) => setReopenDays(Number(e.target.value))}
+                title="Days the student is allowed to sit it"
+                className="w-20 px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-violet-500 outline-none transition-all"
+              />
+              <Button size="sm" variant="ghost" onClick={toggleReopenAll} disabled={reopenParts.length === 0}>
+                Select all
+              </Button>
+              <Button size="sm" icon={<Unlock size={14} />} loading={reopening}
+                disabled={reopenChecked.size === 0}
+                className="bg-violet-600 hover:bg-violet-700 shadow-violet-100"
+                onClick={openContest}>
+                Open for Selected ({reopenChecked.size})
+              </Button>
+            </div>
+          </div>
+
+          {loadingReopen ? (
+            <div className="py-12 text-center text-slate-400">Loading students…</div>
+          ) : reopenParts.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">No registered students for this contest yet.</div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                      <th className="px-6 py-3 w-10"></th>
+                      <th className="px-4 py-3">Student</th>
+                      <th className="px-4 py-3">School</th>
+                      <th className="px-4 py-3">Grade</th>
+                      <th className="px-4 py-3 text-center">Status</th>
+                      <th className="px-4 py-3 text-center">Reopen Access</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reopenParts.map((p) => {
+                      const grant = reopenGrants.find((g) => g.student_id === p.id);
+                      const hasGrant = !!grant;
+                      return (
+                        <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50">
+                          <td className="px-6 py-3">
+                            <input
+                              type="checkbox"
+                              checked={reopenChecked.has(p.id)}
+                              disabled={hasGrant}
+                              onChange={() => toggleReopenOne(p.id)}
+                              className="w-4 h-4 accent-violet-600 disabled:opacity-30"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="font-semibold text-slate-900">{p.full_name}</p>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">{p.school || "—"}</td>
+                          <td className="px-4 py-3"><Badge variant="default">{p.grade || "—"}</Badge></td>
+                          <td className="px-4 py-3 text-center">
+                            {p.score != null && p.result_grade != null
+                              ? <Badge variant="success" dot>Completed</Badge>
+                              : <Badge variant="default">Not taken</Badge>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {hasGrant ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <Badge variant="info" dot>Opened</Badge>
+                                {grant.expires_at && (
+                                  <span className="text-[11px] text-slate-400">
+                                    till {new Date(grant.expires_at).toLocaleString()}
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => revokeOpen(p.id)}
+                                  className="text-xs text-red-500 hover:text-red-600 inline-flex items-center gap-1"
+                                  title="Remove reopen access"
+                                >
+                                  <XCircle size={13} /> Revoke
+                                </button>
+                              </div>
+                            ) : (
+                              <Badge variant="default">Not opened</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-6 py-3 text-xs text-slate-400">
+                {reopenGrants.length} student(s) currently granted access
               </div>
             </>
           )}

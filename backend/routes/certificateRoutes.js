@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { verifyOwner } from "../middleware/ownerAuth.js";
-import { verifyToken, requireStudent } from "../middleware/authMiddleware.js";
+import { verifyToken, requireStudent, resetLimiter } from "../middleware/authMiddleware.js";
 import { IMAGE_MIME, sniffImage, sniffPdf } from "../utils/fileGuard.js";
 import {
   saveTemplate,
@@ -88,7 +88,7 @@ router.post("/template/publish", verifyOwner, publishTemplate);
 
 // 🎓 Generate + download
 router.post("/generate", verifyOwner, generateCertificates);
-router.post("/download", downloadCertificate);
+router.post("/download", resetLimiter, downloadCertificate);
 
 // 📤 Manual certificate upload + allocate to a student
 router.post("/manual", verifyOwner, certUpload.single("file"), (req, res, next) => {
