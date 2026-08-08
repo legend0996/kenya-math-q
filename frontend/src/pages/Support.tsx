@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { apiUrl, authHeaders, fetchMe, getUser } from "../utils/api";
 import { Send, LifeBuoy, Check, CheckCheck } from "lucide-react";
 import { Button } from "../components/ui/Button";
+import { Alert } from "../components/ui/Alert";
 
 interface Msg {
   id: number;
@@ -76,45 +77,55 @@ export default function SupportPage() {
 
   if (!me) {
     return (
-      <main className="pt-24 min-h-screen px-4">
-        <div className="max-w-xl mx-auto bg-white rounded-2xl border border-slate-100 p-8 text-center text-slate-500">
-          Please <a href="/login" className="text-blue-600 font-semibold">log in</a> to contact support.
+      <main className="pt-[104px] min-h-screen bg-surface px-4">
+        <div className="max-w-xl mx-auto bg-white rounded-2xl border border-border p-8 text-center">
+          <div className="w-12 h-12 bg-primary-light text-primary-dark rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Lock size={22} />
+          </div>
+          <p className="text-muted">
+            Please <a href="/login" className="text-primary-dark font-semibold">log in</a> to contact support.
+          </p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50 px-4 py-12">
+    <main className="pt-[104px] min-h-screen bg-surface px-4 py-12">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-slate-900 mb-1 inline-flex items-center gap-2">
-          <LifeBuoy size={22} className="text-blue-600" /> Support
-        </h1>
-        <p className="text-slate-500 text-sm mb-6">Messages go to the admin team, who can reply here.</p>
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-12 h-12 bg-primary text-white rounded-xl flex items-center justify-center">
+            <LifeBuoy size={22} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Support</h1>
+            <p className="text-muted text-sm">Messages go to the admin team, who can reply here.</p>
+          </div>
+        </div>
 
-        {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-4">⚠ {error}</div>}
+        {error && <div className="mt-4 mb-4"><Alert variant="error">{error}</Alert></div>}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="h-[24rem] overflow-y-auto px-4 py-4 space-y-2 bg-slate-50/60">
+        <div className="bg-white rounded-2xl shadow-soft border border-border overflow-hidden mt-6">
+          <div className="h-[24rem] overflow-y-auto px-4 py-4 space-y-2 bg-surface">
             {msgs.length === 0 && (
-              <p className="text-sm text-slate-400 text-center pt-8">No messages yet. Ask us anything below.</p>
+              <p className="text-sm text-muted text-center pt-8">No messages yet. Ask us anything below.</p>
             )}
             {msgs.map((m) => {
               const mine = m.author_id === myId;
               return (
-                <div key={m.id} className="text-xs text-slate-400 mb-0.5">
+                <div key={m.id} className="text-xs text-muted mb-0.5">
                   {!mine && (
-                    <p className="text-[11px] mb-0.5 font-medium text-slate-500">
+                    <p className="text-[11px] mb-0.5 font-medium text-muted">
                       {m.author_role === "owner" ? "Support Team" : (m.sender_name || m.author_role)} • {time(m.created_at)}
                     </p>
                   )}
                   <div className={`max-w-[80%] px-3 py-2 text-sm rounded-2xl whitespace-pre-wrap ${
-                    mine ? "ml-auto bg-blue-600 text-white rounded-br-sm" : "bg-white border border-slate-200 text-slate-800 rounded-bl-sm"
+                    mine ? "ml-auto bg-primary-dark text-white rounded-br-sm" : "bg-white border border-border text-foreground rounded-bl-sm"
                   }`}>
                     {m.message}
                   </div>
                   {mine && (
-                    <p className={`text-[10px] mt-0.5 inline-flex items-center gap-0.5 ${m.read_flag ? "text-emerald-500" : "text-slate-400"}`}>
+                    <p className={`text-[10px] mt-0.5 inline-flex items-center gap-0.5 ${m.read_flag ? "text-emerald-500" : "text-muted"}`}>
                       {m.read_flag ? <><CheckCheck size={11} /> Seen</> : <><Check size={11} /> Sent</>}
                     </p>
                   )}
@@ -124,12 +135,12 @@ export default function SupportPage() {
             <div ref={bottomRef} />
           </div>
 
-          <form onSubmit={send} className="flex items-center gap-2 border-t border-slate-200 px-3 py-2">
+          <form onSubmit={send} className="flex items-center gap-2 border-t border-border px-3 py-2 bg-white">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Write a message…"
-              className="flex-1 text-sm px-3 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+              className="flex-1 text-sm px-3 py-2 rounded-xl border border-border focus:border-primary-dark focus:ring-4 focus:ring-pumpkin-spice-900/60 outline-none transition-all"
             />
             <Button type="submit" size="sm" loading={loading} icon={<Send size={15} />}>Send</Button>
           </form>

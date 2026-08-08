@@ -76,16 +76,16 @@ export default function CalculatorWidget() {
         onClick={() => setOpen(!open)}
         aria-label="Calculator"
         title="Calculator"
-        className="fixed bottom-5 left-5 z-50 h-14 w-14 rounded-full bg-slate-900 text-white shadow-xl hover:bg-slate-700 flex items-center justify-center"
+        className="fixed bottom-5 left-5 z-50 h-14 w-14 rounded-full bg-charcoal-200 text-white shadow-overlay hover:bg-charcoal-300 flex items-center justify-center"
       >
         {open ? <X size={24} /> : <CalcIcon size={24} />}
       </button>
 
       {open && (
-        <div className="fixed bottom-24 left-5 z-50 w-72 rounded-2xl bg-white shadow-2xl border border-slate-200 p-3 select-none">
-          <div className="text-center mb-2 px-2 py-2 rounded-xl bg-slate-100 min-h-11 flex flex-col justify-center">
-            <div className="text-xs text-slate-500 text-right truncate h-4">{expr}</div>
-            <div className="text-2xl font-bold text-slate-900 text-right truncate">{ans ?? "0"}</div>
+        <div className="fixed bottom-24 left-5 z-50 w-72 rounded-2xl bg-white shadow-overlay border border-border p-3 select-none animate-fade-scale">
+          <div className="text-center mb-2 px-2 py-2 rounded-xl bg-ghost-white-500 min-h-11 flex flex-col justify-center">
+            <div className="text-xs text-muted text-right truncate h-4">{expr}</div>
+            <div className="text-2xl font-bold text-charcoal-300 text-right truncate">{ans ?? "0"}</div>
           </div>
           <div className="grid grid-cols-4 gap-1.5">
             {BTNS.map((b, i) => (
@@ -93,11 +93,11 @@ export default function CalculatorWidget() {
                 key={i}
                 onClick={() => press(b)}
                 className={`h-12 rounded-xl text-sm font-semibold transition-colors ${
-                  b.fn === "=" ? "bg-blue-600 text-white" :
+                  b.fn === "=" ? "bg-primary text-white hover:bg-primary-dark" :
                   ["C", "⌫"].includes(b.l) ? "bg-red-50 text-red-600" :
-                  ["+", "-", "*", "/", "%", "**2", "√"].includes(b.o || b.fn || b.l) ? "bg-slate-100 text-slate-700" :
-                  b.l === "(" || b.l === ")" ? "bg-slate-100 text-slate-700" :
-                  "bg-white border border-slate-200 text-slate-800 hover:bg-slate-50"
+                  ["+", "-", "*", "/", "%", "**2", "√"].includes(b.o || b.fn || b.l) ? "bg-ghost-white-500 text-foreground" :
+                  b.l === "(" || b.l === ")" ? "bg-ghost-white-500 text-foreground" :
+                  "bg-white border border-border text-charcoal-500 hover:bg-slate-50"
                 }`}
               >
                 {b.l}

@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import {
   Trophy, BookOpen, Award, BarChart2, Calendar,
   LogOut, ChevronRight, Download, Play, Clock, CheckCircle,
-  UserPlus, CreditCard, Lock, AlertCircle, ExternalLink,
-  Smartphone, Receipt, X, Check,
+  UserPlus, CreditCard, Lock, ExternalLink,
+  Smartphone, Receipt, Check,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card, StatCard } from "../components/ui/Card";
@@ -219,39 +219,33 @@ const handleLogout = async () => {
   const reopened = !!contest?.reopened;
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50">
+    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
 
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <p className="text-sm font-medium text-slate-500 mb-1">Welcome back</p>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{user?.name} 👋</h1>
+            <p className="text-sm font-medium text-muted mb-1">Welcome back</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">{user?.name}</h1>
           </div>
-          <Button variant="ghost" icon={<LogOut size={16} />} onClick={handleLogout}
-            className="text-red-500 hover:bg-red-50 hover:text-red-600">
-            Logout
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" icon={<LogOut size={16} />} onClick={handleLogout}
+              className="text-red-500 hover:bg-red-50 hover:text-red-600">
+              Logout
+            </Button>
+          </div>
         </div>
 
-        {/* Feedback */}
         {feedback && (
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl mb-6 text-sm font-medium ${
-            feedback.type === "success"
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-              : "bg-red-50 border border-red-200 text-red-700"
-          }`}>
-            {feedback.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-            {feedback.msg}
+          <div className="mb-6">
+            <Alert variant={feedback.type}>{feedback.msg}</Alert>
           </div>
         )}
 
-        {/* Dashboard theme colour — 20 choices */}
         <Card className="mb-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-bold text-slate-900">Dashboard colour</h2>
-              <p className="text-sm text-slate-500">Pick the colour you like — it changes your whole dashboard.</p>
+              <h2 className="font-bold text-foreground">Dashboard colour</h2>
+              <p className="text-sm text-muted">Pick the colour you like — it changes your whole dashboard.</p>
             </div>
             <span className="text-xs font-semibold px-3 py-1 rounded-lg"
               style={{ backgroundColor: theme.c100, color: theme.c700 }}>
@@ -267,7 +261,7 @@ const handleLogout = async () => {
                   title={t.name}
                   onClick={() => pickTheme(t)}
                   className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform duration-150 ${
-                    selected ? "ring-2 ring-offset-2 ring-slate-400 scale-110" : "hover:scale-110"
+                    selected ? "ring-2 ring-offset-2 ring-primary-dark scale-110" : "hover:scale-110"
                   }`}
                   style={{ backgroundColor: t.c600 }}
                 >
@@ -278,29 +272,26 @@ const handleLogout = async () => {
           </div>
         </Card>
 
-        {/* Stats */}
         <div className="grid sm:grid-cols-3 gap-4 mb-8">
           <StatCard label="Your Score" value={result?.score ?? "—"} icon={<BarChart2 size={22} />} />
           <StatCard label="Contests Entered" value={pastContests.length} icon={<Trophy size={22} />} />
           <StatCard label="Certificates" value={result ? "1" : "0"} icon={<Award size={22} />} />
         </div>
 
-        {/* Current contest */}
         <section className="mb-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <Trophy size={20} className="text-blue-600" /> Current Contest
+          <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+            <Trophy size={20} className="text-primary-dark" /> Current Contest
           </h2>
 
           {!contest ? (
             <Card className="text-center py-10">
               <Trophy size={36} className="text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No active contest right now</p>
+              <p className="text-muted font-medium">No active contest right now</p>
               <p className="text-sm text-slate-400 mt-1">Check back soon for upcoming competitions</p>
             </Card>
           ) : (
             <>
-              {/* Contest info */}
-              <Card className="border-l-4 border-l-blue-500 mb-4">
+              <Card className="border-l-4 border-l-primary-dark mb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -310,13 +301,12 @@ const handleLogout = async () => {
                         : upcoming ? <Badge variant="info">Upcoming</Badge>
                         : <Badge variant="default">Ended</Badge>}
                     </div>
-                    <p className="text-sm text-slate-500 flex items-center gap-1.5">
+                    <p className="text-sm text-muted flex items-center gap-1.5">
                       <Calendar size={13} />
                       {contest.start_time ? new Date(contest.start_time).toDateString() : "Dates to be announced"}
                     </p>
                   </div>
 
-                  {/* Registration / payment / exam buttons */}
                   {!registered ? (
                     contest.is_test ? (
                       <Button icon={<UserPlus size={16} />} onClick={handleRegisterDirect}>
@@ -343,12 +333,11 @@ const handleLogout = async () => {
                 </div>
               </Card>
 
-              {/* Exam card */}
               {registered && (
                 <Card className="mb-4 border-l-4 border-l-emerald-500">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="font-bold text-slate-900">Mathematics Paper</h3>
+                      <h3 className="font-bold text-foreground">Mathematics Paper</h3>
                       {result ? (
                         <p className="text-sm text-emerald-600 font-semibold mt-1 flex items-center gap-1">
                           <CheckCircle size={14} /> Completed — Score: {result.score} pts
@@ -372,11 +361,11 @@ const handleLogout = async () => {
                                 : "The exam is ongoing but you must complete payment to unlock it."}
                         </p>
                       ) : upcoming ? (
-                        <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
+                        <p className="text-sm text-muted mt-1 flex items-center gap-1">
                           <Clock size={13} /> Exam opens when the contest goes live.
                         </p>
                       ) : (
-                        <p className="text-sm text-slate-500 mt-1">Contest has ended.</p>
+                        <p className="text-sm text-muted mt-1">Contest has ended.</p>
                       )}
                     </div>
 
@@ -413,22 +402,21 @@ const handleLogout = async () => {
                 </Card>
               )}
 
-              {/* M-PESA payment */}
               {registered && !paid && (
                 <Card>
-                  <h3 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
+                  <h3 className="font-bold text-foreground mb-1 flex items-center gap-2">
                     <CreditCard size={18} className="text-emerald-600" /> Pay Entry Fee (M-PESA)
                   </h3>
 
                   {paymentStatus === "pending" || paymentStatus === "stk_pending" ? (
                     <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm px-4 py-3 rounded-xl">
-                      ⏳ {paymentStatus === "stk_pending"
+                      {paymentStatus === "stk_pending"
                         ? "Your M-PESA (STK) payment is being confirmed automatically — once confirmed you can start the exam."
                         : "Your registration is recorded as M-PESA Unconfirmed. Await admin approval, then you can start the exam."}
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-muted">
                         Choose how you&apos;d like to pay the entry fee:
                       </p>
                       <div className="flex flex-col sm:flex-row gap-2">
@@ -452,10 +440,9 @@ const handleLogout = async () => {
           )}
         </section>
 
-        {/* Quick actions */}
         <div className="grid sm:grid-cols-3 gap-4 mb-8">
           {[
-            { icon: <BarChart2 size={22} />, title: "Results", desc: "View your performance", color: "text-violet-600", bg: "bg-violet-50" },
+            {icon: <BarChart2 size={22} />, title: "Results", desc: "View your performance", color: "text-cool-sky-300", bg: "bg-cool-sky-50" },
             { icon: <Award size={22} />, title: "Certificates", desc: "Download your certificates", color: "text-amber-600", bg: "bg-amber-50" },
             { icon: <BookOpen size={22} />, title: "Practice", desc: "Access study resources", color: "text-emerald-600", bg: "bg-emerald-50" },
           ].map((item) => (
@@ -464,24 +451,23 @@ const handleLogout = async () => {
                 <span className={item.color}>{item.icon}</span>
               </div>
               <div>
-                <p className="font-bold text-slate-900">{item.title}</p>
-                <p className="text-sm text-slate-500 mt-0.5">{item.desc}</p>
+                <p className="font-bold text-foreground">{item.title}</p>
+                <p className="text-sm text-muted mt-0.5">{item.desc}</p>
               </div>
               <ChevronRight size={16} className="text-slate-300 ml-auto self-center shrink-0" />
             </Card>
           ))}
         </div>
 
-        {/* My Certificates */}
         <section className="mb-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
             <Award size={20} className="text-amber-500" /> My Certificates
           </h2>
 
           {myCerts.length === 0 ? (
             <Card className="text-center py-8">
               <Award size={36} className="text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">No certificates yet</p>
+              <p className="text-muted font-medium">No certificates yet</p>
               <p className="text-sm text-slate-400 mt-1">Certificates appear here once issued by the organizers</p>
             </Card>
           ) : (
@@ -490,12 +476,12 @@ const handleLogout = async () => {
                 <Card key={c.id} hover className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-slate-900">{c.contest_name || "Certificate"}</h3>
+                      <h3 className="font-bold text-foreground">{c.contest_name || "Certificate"}</h3>
                       {c.source === "manual"
                         ? <Badge variant="info">Manual</Badge>
                         : c.grade ? <Badge variant="success">{c.grade}</Badge> : <Badge variant="default">Issued</Badge>}
                     </div>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-muted mt-1">
                       {c.grade && c.score != null ? `Score: ${c.score} · ${c.grade} · ` : ""}
                       {new Date(c.created_at).toLocaleDateString()}
                     </p>
@@ -509,9 +495,8 @@ const handleLogout = async () => {
           )}
         </section>
 
-        {/* Past contests */}
         <section>
-          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
             <Calendar size={20} className="text-slate-400" /> Past Contests
           </h2>
 
@@ -525,8 +510,8 @@ const handleLogout = async () => {
                 <Card key={c.id} hover>
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-bold text-slate-900">{c.name}</h3>
-                      <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5">
+                      <h3 className="font-bold text-foreground">{c.name}</h3>
+                      <p className="text-sm text-muted mt-1 flex items-center gap-1.5">
                         <Calendar size={12} />
                         {c.start_time ? new Date(c.start_time).toDateString() : "—"}
                       </p>
@@ -539,15 +524,14 @@ const handleLogout = async () => {
           )}
         </section>
 
-        {/* Study materials (revision) + past tests taken */}
         <section className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <BookOpen size={20} className="text-emerald-600" /> Study Materials &amp; Past Tests
             </h2>
             {myGrade && (
               <button onClick={() => navigate("/settings")}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1.5">
+                className="text-sm font-semibold text-primary-dark hover:text-primary flex items-center gap-1.5">
                 My class: {myGrade} <ChevronRight size={14} />
               </button>
             )}
@@ -556,7 +540,7 @@ const handleLogout = async () => {
           {materials.length === 0 && myPastTests.length === 0 ? (
             <Card className="text-center py-8">
               <BookOpen size={32} className="text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-500 font-medium">No study materials yet</p>
+              <p className="text-muted font-medium">No study materials yet</p>
               <p className="text-sm text-slate-400 mt-1">
                 Revision materials uploaded by your administrator appear here.
               </p>
@@ -572,7 +556,7 @@ const handleLogout = async () => {
                           m.content_type === "file"
                             ? "bg-amber-50 text-amber-600"
                             : m.content_type === "link"
-                              ? "bg-blue-50 text-blue-600"
+                              ? "bg-cool-sky-50 text-cool-sky-300"
                               : m.content_type === "video"
                                 ? "bg-red-50 text-red-600"
                                 : "bg-emerald-50 text-emerald-600"
@@ -580,8 +564,8 @@ const handleLogout = async () => {
                           {m.content_type === "file" ? <Download size={18} /> : m.content_type === "link" ? <ExternalLink size={18} /> : m.content_type === "video" ? <Play size={18} /> : <BookOpen size={18} />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-slate-900">{m.title}</p>
-                          {m.description && <p className="text-sm text-slate-500 mt-0.5">{m.description}</p>}
+                          <p className="font-bold text-foreground">{m.title}</p>
+                          {m.description && <p className="text-sm text-muted mt-0.5">{m.description}</p>}
                           <p className="text-xs text-slate-400 mt-1">
                             {m.content_type === "link" ? "Link" : m.content_type === "file" ? "File" : m.content_type === "video" ? "Video" : "Notes"}
                             {" · "}{new Date(m.created_at).toLocaleDateString()}
@@ -590,14 +574,14 @@ const handleLogout = async () => {
                       </div>
                       {m.content_type === "video" ? (
                         <button onClick={() => navigate("/tuition")}
-                          className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                          className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-dark hover:text-primary">
                           <Play size={14} /> Watch on Tuition page <ChevronRight size={13} />
                         </button>
                       ) : m.content_type === "text" && m.content ? (
-                        <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-3 mt-3 whitespace-pre-wrap">{m.content}</p>
+                        <p className="text-sm text-slate-600 bg-surface rounded-xl p-3 mt-3 whitespace-pre-wrap">{m.content}</p>
                       ) : m.content ? (
                         <a href={m.content} target="_blank" rel="noopener noreferrer"
-                          className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                          className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-dark hover:text-primary">
                           {m.content_type === "link" ? "Open resource" : "Download file"} <ExternalLink size={13} />
                         </a>
                       ) : null}
@@ -608,17 +592,17 @@ const handleLogout = async () => {
 
               {myPastTests.length > 0 && (
                 <div>
-                  <p className="text-sm font-semibold text-slate-700 mb-3">Past tests you have entered</p>
+                  <p className="text-sm font-semibold text-foreground mb-3">Past tests you have entered</p>
                   <div className="grid sm:grid-cols-2 gap-4">
                     {myPastTests.map((t) => (
                       <Card key={t.id} hover>
                         <div className="flex justify-between items-start gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-bold text-slate-900 truncate">{t.name}</h3>
+                              <h3 className="font-bold text-foreground truncate">{t.name}</h3>
                               {t.is_test ? <Badge variant="info">Test</Badge> : <Badge variant="default">Contest</Badge>}
                             </div>
-                            <p className="text-sm text-slate-500 mt-1">
+                            <p className="text-sm text-muted mt-1">
                               {t.start_time ? new Date(t.start_time).toDateString() : "—"}
                             </p>
                           </div>
@@ -638,116 +622,102 @@ const handleLogout = async () => {
         </section>
       </div>
 
-      {/* Register & Pay modal */}
-      {regModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold text-lg text-slate-900">
-                {registered ? "Pay Entry Fee" : "Register & Pay for Contest"}
-              </h3>
-              <button onClick={() => { setRegModal(false); setPayMethod(null); setStkMsg(null); }}
-                className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
-              </button>
-            </div>
-
-            {!payMethod ? (
-              <div className="space-y-3 pt-2">
-                <p className="text-sm text-slate-500">Choose how you&apos;d like to pay the entry fee:</p>
-                <button
-                  onClick={() => openPayModal("stk")}
-                  className="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-left"
-                >
-                  <Smartphone size={20} className="text-blue-600 shrink-0" />
-                  <div>
-                    <p className="font-semibold text-slate-900">Pay via M-PESA (STK) — instant</p>
-                    <p className="text-xs text-slate-500">You&apos;ll get an M-PESA prompt on your phone. Enter your PIN to pay instantly.</p>
-                  </div>
-                </button>
-                <button
-                  onClick={() => openPayModal("manual")}
-                  className="w-full flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
-                >
-                  <Receipt size={20} className="text-emerald-600 shrink-0" />
-                  <div>
-                    <p className="font-semibold text-slate-900">Pay Manually (Till)</p>
-                    <p className="text-xs text-slate-500">Send money via Lipa na M-PESA to Till <b>123456</b>, paste the message below, and submit for review.</p>
-                  </div>
-                </button>
+      <Modal
+        open={regModal}
+        onClose={() => { setRegModal(false); setPayMethod(null); setStkMsg(null); }}
+        title={registered ? "Pay Entry Fee" : "Register & Pay for Contest"}
+        subtitle={registered ? "Complete your M-PESA payment to unlock the exam." : "Register for the contest and pay the entry fee."}
+      >
+        {!payMethod ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted">Choose how you&apos;d like to pay the entry fee:</p>
+            <button
+              onClick={() => openPayModal("stk")}
+              className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:border-primary hover:bg-pumpkin-spice-900/50 transition-all text-left"
+            >
+              <Smartphone size={20} className="text-primary-dark shrink-0" />
+              <div>
+                <p className="font-semibold text-foreground">Pay via M-PESA (STK) — instant</p>
+                <p className="text-xs text-muted">You&apos;ll get an M-PESA prompt on your phone. Enter your PIN to pay instantly.</p>
               </div>
-            ) : payMethod === "stk" ? (
-              <div className="space-y-4 pt-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  M-PESA Phone Number (Safaricom)
-                </label>
-                <input
-                  value={stkPhone}
-                  onChange={(e) => setStkPhone(e.target.value)}
-                  placeholder="e.g. 0712 345 678"
-                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                />
-                {stkMsg && (
-                  <div className={`text-sm px-4 py-3 rounded-xl ${
-                    stkMsg.type === "success"
-                      ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-                      : "bg-red-50 border border-red-200 text-red-700"
-                  }`}>
-                    {stkMsg.type === "success" ? <CheckCircle size={15} /> : <AlertCircle size={15} />} {stkMsg.text}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Button loading={stkBusy} icon={<Smartphone size={15} />} onClick={handleStk}>
-                    Send STK Prompt
-                  </Button>
-                  <Button variant="ghost" onClick={() => { setPayMethod(null); setStkMsg(null); }}>Back</Button>
-                </div>
+            </button>
+            <button
+              onClick={() => openPayModal("manual")}
+              className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
+            >
+              <Receipt size={20} className="text-emerald-600 shrink-0" />
+              <div>
+                <p className="font-semibold text-foreground">Pay Manually (Till)</p>
+                <p className="text-xs text-muted">Send money via Lipa na M-PESA to Till <b>123456</b>, paste the message below, and submit for review.</p>
               </div>
-            ) : (
-              <div className="space-y-4 pt-2">
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-slate-700 space-y-1">
-                  <p className="font-semibold text-emerald-800">How to pay manually:</p>
-                  <p>1. Go to M-PESA on your phone</p>
-                  <p>2. Choose <b>Lipa na M-PESA</b> → <b>Buy Goods</b></p>
-                  <p>3. Enter Till Number <b className="text-lg">123456</b></p>
-                  <p>4. Enter the amount and your PIN, then confirm</p>
-                  <p>5. Paste the M-PESA confirmation message below</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Paste M-PESA message</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Paste the full M-PESA confirmation message (with the code)…"
-                    value={mpesa.proof}
-                    onChange={(e) => setMpesa({ ...mpesa, proof: e.target.value })}
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">M-PESA code</label>
-                  <input
-                    value={mpesa.code}
-                    onChange={(e) => setMpesa({ ...mpesa, code: e.target.value })}
-                    placeholder="e.g. SFS5K7X2QZ"
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    loading={submittingPay}
-                    icon={<ExternalLink size={15} />}
-                    className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
-                    onClick={handleManualSubmit}
-                  >
-                    Submit for Review
-                  </Button>
-                  <Button variant="ghost" onClick={() => { setPayMethod(null); setStkMsg(null); }}>Back</Button>
-                </div>
-              </div>
-            )}
+            </button>
           </div>
-        </div>
-      )}
+        ) : payMethod === "stk" ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                M-PESA Phone Number (Safaricom)
+              </label>
+              <input
+                value={stkPhone}
+                onChange={(e) => setStkPhone(e.target.value)}
+                placeholder="e.g. 0712 345 678"
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-4 focus:ring-pumpkin-spice-900/60 outline-none transition-all"
+              />
+            </div>
+            {stkMsg && (
+              <Alert variant={stkMsg.type}>{stkMsg.text}</Alert>
+            )}
+            <div className="flex gap-2">
+              <Button loading={stkBusy} icon={<Smartphone size={15} />} onClick={handleStk}>
+                Send STK Prompt
+              </Button>
+              <Button variant="ghost" onClick={() => { setPayMethod(null); setStkMsg(null); }}>Back</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-slate-700 space-y-1">
+              <p className="font-semibold text-emerald-800">How to pay manually:</p>
+              <p>1. Go to M-PESA on your phone</p>
+              <p>2. Choose <b>Lipa na M-PESA</b> → <b>Buy Goods</b></p>
+              <p>3. Enter Till Number <b className="text-lg">123456</b></p>
+              <p>4. Enter the amount and your PIN, then confirm</p>
+              <p>5. Paste the M-PESA confirmation message below</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Paste M-PESA message</label>
+              <textarea
+                rows={3}
+                placeholder="Paste the full M-PESA confirmation message (with the code)…"
+                value={mpesa.proof}
+                onChange={(e) => setMpesa({ ...mpesa, proof: e.target.value })}
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition-all resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">M-PESA code</label>
+              <input
+                value={mpesa.code}
+                onChange={(e) => setMpesa({ ...mpesa, code: e.target.value })}
+                placeholder="e.g. SFS5K7X2QZ"
+                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition-all"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                loading={submittingPay}
+                icon={<ExternalLink size={15} />}
+                className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
+                onClick={handleManualSubmit}
+              >
+                Submit for Review
+              </Button>
+              <Button variant="ghost" onClick={() => { setPayMethod(null); setStkMsg(null); }}>Back</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </main>
   );
 }

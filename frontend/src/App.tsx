@@ -5,6 +5,12 @@ import Footer from "./components/Footer";
 import ChatbotWidget from "./components/ChatbotWidget";
 import CalculatorWidget from "./components/CalculatorWidget";
 import Home from "./pages/Home";
+import About from "./pages/About";
+import Competition from "./pages/Competition";
+import Schools from "./pages/Schools";
+import Materials from "./pages/Materials";
+import FAQ from "./pages/FAQ";
+import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -40,6 +46,12 @@ export default function App() {
       <div className="flex-1 page-enter">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/competition" element={<Competition />} />
+          <Route path="/schools" element={<Schools />} />
+          <Route path="/materials" element={<Materials />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />

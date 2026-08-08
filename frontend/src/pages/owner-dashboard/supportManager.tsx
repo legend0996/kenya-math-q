@@ -3,7 +3,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { apiUrl, authHeaders } from "../../utils/api";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import { Send, MessageSquare, CheckCheck, GraduationCap, School, Users } from "lucide-react";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { Send, MessageSquare, CheckCheck, GraduationCap, School, Users, AlertCircle } from "lucide-react";
 
 interface Conversation {
   role: string;
@@ -117,12 +118,12 @@ export default function SupportManager() {
 
   return (
     <div className="space-y-4">
-      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">⚠ {error}</div>}
+      {error && <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl"><AlertCircle size={16} /> {error}</div>}
 
       <Card>
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-slate-900 inline-flex items-center gap-2">
-            <MessageSquare size={16} className="text-blue-600" /> Support Inbox
+            <MessageSquare size={16} className="text-primary-dark" /> Support Inbox
           </h3>
           {unreadTotal > 0 && (
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full">
@@ -130,13 +131,13 @@ export default function SupportManager() {
             </span>
           )}
         </div>
-        <p className="text-xs text-slate-400 mb-4">Messages from users, newest first. Student messages are blue, your replies are red.</p>
+        <p className="text-xs text-muted mb-4">Messages from users, newest first. Student messages are blue, your replies are red.</p>
 
         <div className="grid md:grid-cols-[280px_1fr] gap-4">
           {/* Conversation list */}
           <div className="border border-slate-100 rounded-xl overflow-hidden max-h-[32rem] overflow-y-auto">
             {conversations.length === 0 ? (
-              <p className="text-sm text-slate-400 py-8 text-center">No support messages yet.</p>
+              <EmptyState title="No support messages yet" description="User messages will appear here." />
             ) : (
               <div className="divide-y divide-slate-50">
                 {conversations.map((c) => {
@@ -146,24 +147,24 @@ export default function SupportManager() {
                       key={`${c.role}-${c.id}`}
                       onClick={() => openConversation(c)}
                       className={`w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${
-                        isActive ? "bg-blue-50" : "hover:bg-slate-50"
+                        isActive ? "bg-primary-light" : "hover:bg-slate-50"
                       }`}
                     >
-                      <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-600 text-sm font-bold flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-slate-200 text-foreground text-sm font-bold flex items-center justify-center shrink-0">
                         {(c.name || "?")[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-semibold text-slate-900 text-sm truncate inline-flex items-center gap-1">
                             {c.name || "Unknown"}
-                            <span className="text-slate-400 font-normal inline-flex items-center gap-0.5">
+                            <span className="text-muted font-normal inline-flex items-center gap-0.5">
                               {roleIcon(c.role)}
                             </span>
                           </span>
-                          <span className="text-[10px] text-slate-400 shrink-0">{time(c.last_time)}</span>
+                          <span className="text-[10px] text-muted shrink-0">{time(c.last_time)}</span>
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-0.5">
-                          <p className="text-xs text-slate-500 truncate">{c.last_message || "…"}</p>
+                          <p className="text-xs text-muted truncate">{c.last_message || "…"}</p>
                           {c.unread > 0 && (
                             <span className="shrink-0 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
                               {c.unread}
@@ -181,7 +182,7 @@ export default function SupportManager() {
           {/* Thread */}
           <div className="border border-slate-100 rounded-xl overflow-hidden flex flex-col">
             {!active ? (
-              <div className="flex-1 min-h-[16rem] flex flex-col items-center justify-center text-slate-400 gap-2 py-10">
+              <div className="flex-1 min-h-[16rem] flex flex-col items-center justify-center text-muted gap-2 py-10">
                 <MessageSquare size={28} className="text-slate-200" />
                 <p className="text-sm font-medium">Select a conversation on the left</p>
               </div>
@@ -189,12 +190,12 @@ export default function SupportManager() {
               <>
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 text-sm font-bold flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-slate-200 text-foreground text-sm font-bold flex items-center justify-center shrink-0">
                       {(active.name || "?")[0].toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-900 text-sm truncate">{active.name || "Unknown"}</p>
-                      <p className="text-[11px] text-slate-400 inline-flex items-center gap-1">
+                      <p className="text-[11px] text-muted inline-flex items-center gap-1">
                         {roleIcon(active.role)} {roleLabel(active.role)}
                       </p>
                     </div>
@@ -203,7 +204,7 @@ export default function SupportManager() {
 
                 <div className="flex-1 max-h-[24rem] overflow-y-auto px-4 py-4 space-y-3 bg-slate-50/60">
                   {msgs.length === 0 && (
-                    <p className="text-sm text-slate-400 text-center pt-8">No messages in this conversation.</p>
+                    <p className="text-sm text-muted text-center pt-8">No messages in this conversation.</p>
                   )}
                   {msgs.map((m) => {
                     // Admin replies sit on the LEFT, student/parent/school messages on the RIGHT
@@ -213,13 +214,13 @@ export default function SupportManager() {
                         <div
                           className={`max-w-[80%] px-3.5 py-2 text-sm rounded-2xl whitespace-pre-wrap shadow-sm ${
                             fromUser
-                              ? "bg-blue-600 text-white rounded-br-sm"
+                              ? "bg-primary-dark text-white rounded-br-sm"
                               : "bg-red-600 text-white rounded-bl-sm"
                           }`}
                         >
                           {m.message}
                         </div>
-                        <div className={`flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 ${fromUser ? "" : "flex-row-reverse"}`}>
+                        <div className={`flex items-center gap-1.5 mt-0.5 text-[10px] text-muted ${fromUser ? "" : "flex-row-reverse"}`}>
                           <span>{time(m.created_at)}</span>
                           {fromUser && (m.read_flag ? <span className="inline-flex items-center gap-0.5 text-emerald-500 font-medium"><CheckCheck size={11} /> seen</span> : <span className="text-amber-500 font-medium">unseen</span>)}
                         </div>
@@ -229,13 +230,13 @@ export default function SupportManager() {
                   <div ref={bottomRef} />
                 </div>
 
-                <div className="flex items-center gap-2 border-t border-slate-200 px-3 py-2">
+                <div className="flex items-center gap-2 border-t border-border px-3 py-2">
                   <input
                     value={reply}
                     onChange={(e) => setReply(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
                     placeholder={`Reply to ${active.name}…`}
-                    className="flex-1 text-sm px-3 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
+                    className="flex-1 text-sm px-3 py-2 rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none"
                   />
                   <Button size="sm" loading={sending} icon={<Send size={14} />} onClick={sendReply}>Reply</Button>
                 </div>

@@ -127,23 +127,23 @@ export default function AnnotationCanvas({
   };
 
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-      <div className="flex items-center gap-1.5 p-1.5 bg-slate-50 border-b border-slate-200 flex-wrap">
+    <div className="border border-border rounded-xl overflow-hidden bg-white">
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-50 border-b border-border flex-wrap">
         <button type="button" onClick={() => setAction("draw")}
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${action === "draw" ? "bg-red-600 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"}`}>
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${action === "draw" ? "bg-red-600 text-white" : "bg-white border border-border text-foreground hover:bg-slate-100"}`}>
           <Pen size={13} /> Red pen
         </button>
         <button type="button" onClick={() => setAction("tick")}
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${action === "tick" ? "bg-emerald-600 text-white" : "bg-white border border-slate-200 text-emerald-600 hover:bg-slate-100"}`}>
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${action === "tick" ? "bg-emerald-600 text-white" : "bg-white border border-border text-emerald-600 hover:bg-slate-100"}`}>
           <Check size={13} /> Tick
         </button>
         <button type="button" onClick={() => setAction("cross")}
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${action === "cross" ? "bg-red-600 text-white" : "bg-white border border-slate-200 text-red-600 hover:bg-slate-100"}`}>
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${action === "cross" ? "bg-red-600 text-white" : "bg-white border border-border text-red-600 hover:bg-slate-100"}`}>
           <XIcon /> Cross
         </button>
         <div className="flex-1" />
         <button type="button" onClick={clearAnnotations}
-          className="px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-red-500 hover:bg-red-50 flex items-center gap-1">
+          className="px-2.5 py-1.5 rounded-lg text-xs bg-white border border-border text-red-500 hover:bg-red-50 flex items-center gap-1">
           <Trash2 size={12} /> Clear marks
         </button>
       </div>

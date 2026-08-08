@@ -4,7 +4,7 @@ import {
   BarChart2, School, Trophy, CreditCard, FileQuestion,
   FlaskConical, ShieldCheck, MessageSquare, PencilRuler,
   CheckCircle2, XCircle, Play, LogOut, Plus, Users, ChevronRight,
-  AlertCircle, Clock, ImageIcon, FileText, BookOpen, Bot, CalendarDays, UsersRound, type LucideIcon,
+  AlertCircle, Clock, ImageIcon, FileText, BookOpen, Bot, CalendarDays, UsersRound, X, type LucideIcon,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { Card, StatCard } from "../../components/ui/Card";
@@ -284,15 +284,15 @@ export default function OwnerDashboard() {
   const visibleTabs = TABS.filter(({ key }) => key === "overview" || can(key));
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50">
+    <main className="pt-[104px] min-h-screen bg-surface">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">Admin Panel</p>
+            <p className="text-xs font-semibold text-primary-dark uppercase tracking-widest mb-1">Admin Panel</p>
             <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-              {adminName ? `Welcome back, ${adminName}` : "Owner Dashboard"} 👋
+              {adminName ? `Welcome back, ${adminName}` : "Owner Dashboard"}
             </h1>
           </div>
           <Button variant="ghost" icon={<LogOut size={16} />}
@@ -322,8 +322,8 @@ export default function OwnerDashboard() {
               onClick={() => setTab(key)}
               className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
                 tab === key
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                  ? "bg-primary-light text-primary-dark shadow-sm"
+                  : "text-muted hover:text-foreground hover:bg-slate-50"
               }`}
             >
               <Icon size={15} /> {label}
@@ -336,7 +336,7 @@ export default function OwnerDashboard() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard label="Students" value={stats.students} icon={<Users size={22} />} />
-              <StatCard label="Schools" value={stats.schools} icon={<School size={22} />} accent="text-violet-600" />
+              <StatCard label="Schools" value={stats.schools} icon={<School size={22} />} accent="text-primary-dark" />
               <StatCard label="Registered" value={stats.registered} icon={<CheckCircle2 size={22} />} accent="text-emerald-600" />
               <StatCard label="Paid" value={stats.paid} icon={<CreditCard size={22} />} accent="text-amber-600" />
             </div>
@@ -356,12 +356,12 @@ export default function OwnerDashboard() {
                 { tab: "certificates" as Tab, icon: <ImageIcon size={20} />, label: "Certificates", desc: "Design, publish & generate" },
               ].map((item) => (
                 <Card key={item.tab} hover onClick={() => setTab(item.tab)} className="flex items-center gap-4 cursor-pointer">
-                  <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 text-blue-600">
+                  <div className="w-11 h-11 rounded-xl bg-primary-light flex items-center justify-center shrink-0 text-primary-dark">
                     {item.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-900">{item.label}</p>
-                    <p className="text-sm text-slate-500 mt-0.5">{item.desc}</p>
+                    <p className="text-sm text-muted mt-0.5">{item.desc}</p>
                   </div>
                   <ChevronRight size={16} className="text-slate-300 shrink-0" />
                 </Card>
@@ -375,14 +375,14 @@ export default function OwnerDashboard() {
           <Card padding="none">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h2 className="font-bold text-slate-900 flex items-center gap-2">
-                <School size={18} className="text-slate-400" /> Pending School Approvals
+                <School size={18} className="text-muted" /> Pending School Approvals
               </h2>
               <Badge variant="warning">{schools.length} pending</Badge>
             </div>
             {schools.length === 0 ? (
-              <div className="text-center py-14 text-slate-400">
+              <div className="text-center py-14 text-muted">
                 <CheckCircle2 size={36} className="mx-auto mb-3 text-emerald-300" />
-                <p className="font-medium text-slate-500">All schools approved</p>
+                <p className="font-medium text-muted">All schools approved</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-50">
@@ -390,7 +390,7 @@ export default function OwnerDashboard() {
                   <div key={s.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50">
                     <div>
                       <p className="font-semibold text-slate-900">{s.name}</p>
-                      <p className="text-sm text-slate-500">{s.email} · {s.county}</p>
+                      <p className="text-sm text-muted">{s.email} · {s.county}</p>
                     </div>
                     <div className="flex gap-2 shrink-0">
                       <Button size="sm" icon={<CheckCircle2 size={14} />}
@@ -411,30 +411,30 @@ export default function OwnerDashboard() {
           <div className="space-y-6">
             <Card>
               <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Plus size={18} className="text-blue-600" /> Create New Contest
+                <Plus size={18} className="text-primary-dark" /> Create New Contest
               </h2>
               <div className="flex flex-col md:flex-row gap-3">
                 <input
                   placeholder="Contest name (e.g. Round 1 — 2026)"
                   value={contestName}
                   onChange={(e) => setContestName(e.target.value)}
-                  className="flex-1 px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  className="flex-1 px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
                 />
                 <input type="date"
                   min={new Date().toISOString().split("T")[0]}
                   value={contestDate}
                   onChange={(e) => setContestDate(e.target.value)}
-                  className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  className="px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
                 />
                 <input type="time"
                   value={contestTime}
                   onChange={(e) => setContestTime(e.target.value)}
-                  className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  className="px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
                 />
                 <input type="number" min={0} placeholder="Entry fee KES"
                   value={contestFee}
                   onChange={(e) => setContestFee(e.target.value)}
-                  className="w-32 px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                  className="w-32 px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
                 />
                 <Button icon={<Plus size={15} />} onClick={handleCreateContest}>Create</Button>
               </div>
@@ -445,7 +445,7 @@ export default function OwnerDashboard() {
                 <h2 className="font-bold text-slate-900">All Contests</h2>
               </div>
               {contests.length === 0 ? (
-                <div className="text-center py-10 text-slate-400"><Trophy size={32} className="mx-auto mb-2 opacity-30" /><p>No contests yet</p></div>
+                <div className="text-center py-10 text-muted"><Trophy size={32} className="mx-auto mb-2 opacity-30" /><p>No contests yet</p></div>
               ) : (
                 <div className="divide-y divide-slate-50">
                   {contests.map((c) => {
@@ -456,7 +456,7 @@ export default function OwnerDashboard() {
                     <div key={c.id} className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50">
                       <div>
                         <p className="font-semibold text-slate-900">{c.name}</p>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-muted">
                           {c.year}
                           {c.start_time ? ` • starts ${new Date(c.start_time).toLocaleString()}` : ""}
                         </p>
@@ -470,11 +470,11 @@ export default function OwnerDashboard() {
                                     st === "live"
                                       ? "bg-emerald-50 border-emerald-200 text-emerald-700"
                                       : st === "upcoming"
-                                        ? "bg-blue-50 border-blue-200 text-blue-700"
-                                        : "bg-slate-100 border-slate-200 text-slate-500"
+                                        ? "bg-primary-light border-primary-light text-primary-dark"
+                                        : "bg-slate-100 border-border text-muted"
                                   }`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${
-                                    st === "live" ? "bg-emerald-500" : st === "upcoming" ? "bg-blue-500" : "bg-slate-400"
+                                    st === "live" ? "bg-emerald-500" : st === "upcoming" ? "bg-primary" : "bg-slate-400"
                                   }`} />
                                   {grade}: {fmtSlotDate(start)}{st === "live" ? " · LIVE" : st === "ended" ? " · ended" : ""}
                                 </span>
@@ -494,13 +494,13 @@ export default function OwnerDashboard() {
                         <Button size="sm" variant="outline" icon={<CalendarDays size={13} />} onClick={() => openDays(c)}>
                           Grade Days
                         </Button>
-                        <span className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-600">
+                        <span className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-foreground">
                           Fee: KES {c.entry_fee ?? 0}
                         </span>
                         <input type="number" min={0} placeholder="new fee"
                           value={feeInputs[c.id] ?? ""}
                           onChange={(e) => setFeeInputs((p) => ({ ...p, [c.id]: e.target.value }))}
-                          className="w-20 px-2 py-1 text-xs rounded-lg border border-slate-200 outline-none"
+                          className="w-20 px-2 py-1 text-xs rounded-lg border border-border outline-none"
                         />
                         <Button size="sm" variant="outline" onClick={() => updateFee(c.id)}>Set Fee</Button>
                         {c.status !== "live" && c.status !== "ended" && (
@@ -525,18 +525,18 @@ export default function OwnerDashboard() {
               <Card>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-bold text-slate-900 flex items-center gap-2">
-                    <Clock size={18} className="text-blue-600" /> Exam Duration — {timesContest.name}
+                    <Clock size={18} className="text-primary-dark" /> Exam Duration — {timesContest.name}
                   </h2>
-                  <Button variant="ghost" size="sm" onClick={() => setTimesContest(null)}>✕ Close</Button>
+                  <Button variant="ghost" size="sm" icon={<X size={14} />} onClick={() => setTimesContest(null)}>Close</Button>
                 </div>
-                <p className="text-sm text-slate-500 mb-4">Set the time allowed for each grade&apos;s paper (minutes).</p>
+                <p className="text-sm text-muted mb-4">Set the time allowed for each grade&apos;s paper (minutes).</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {GRADES.map((g) => (
                     <div key={g}>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">{g}</label>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">{g}</label>
                       <input type="number" min={1} max={240} value={times[g] ?? 10}
                         onChange={(e) => setTimes({ ...times, [g]: Number(e.target.value) })}
-                        className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
+                        className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
                     </div>
                   ))}
                 </div>
@@ -551,20 +551,20 @@ export default function OwnerDashboard() {
               <Card>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-bold text-slate-900 flex items-center gap-2">
-                    <CalendarDays size={18} className="text-blue-600" /> Contest Days — {daysContest.name}
+                    <CalendarDays size={18} className="text-primary-dark" /> Contest Days — {daysContest.name}
                   </h2>
-                  <Button variant="ghost" size="sm" onClick={() => setDaysContest(null)}>✕ Close</Button>
+                  <Button variant="ghost" size="sm" icon={<X size={14} />} onClick={() => setDaysContest(null)}>Close</Button>
                 </div>
-                <p className="text-sm text-slate-500 mb-1">
+                <p className="text-sm text-muted mb-1">
                   Give each grade (class) its own contest day. Unchecked grades keep the global contest window, so all classes can still take the exam at the same time.
                 </p>
-                <p className="text-xs text-slate-400 mb-4">Times shown in local time.</p>
+                <p className="text-xs text-muted mb-4">Times shown in local time.</p>
                 <div className="space-y-3">
                   {GRADES.map((g) => {
                     const on = !!days[g];
                     return (
                       <div key={g} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-50 rounded-xl p-3">
-                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 w-28 shrink-0">
+                        <label className="flex items-center gap-2 text-sm font-semibold text-foreground w-28 shrink-0">
                           <input
                             type="checkbox"
                             checked={on}
@@ -576,7 +576,7 @@ export default function OwnerDashboard() {
                                   : null,
                               }))
                             }
-                            className="w-4 h-4 accent-blue-600"
+                            className="w-4 h-4 accent-primary-dark"
                           />
                           {g}
                         </label>
@@ -586,17 +586,17 @@ export default function OwnerDashboard() {
                               type="datetime-local"
                               value={days[g]?.start?.slice(0, 16) || ""}
                               onChange={(e) => setDays((p) => ({ ...p, [g]: { start: e.target.value, end: p[g]?.end || e.target.value } }))}
-                              className="flex-1 min-w-0 px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                              className="flex-1 min-w-0 px-3 py-2 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
                             />
                             <input
                               type="datetime-local"
                               value={days[g]?.end?.slice(0, 16) || ""}
                               onChange={(e) => setDays((p) => ({ ...p, [g]: { start: p[g]?.start || e.target.value, end: e.target.value } }))}
-                              className="flex-1 min-w-0 px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                              className="flex-1 min-w-0 px-3 py-2 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
                             />
                           </>
                         ) : (
-                          <span className="text-sm text-slate-400">Uses global contest window</span>
+                          <span className="text-sm text-muted">Uses global contest window</span>
                         )}
                       </div>
                     );
@@ -627,7 +627,7 @@ export default function OwnerDashboard() {
                 <Badge variant="warning">{pendingPays.length} pending</Badge>
               </div>
               {pendingPays.length === 0 ? (
-                <div className="text-center py-10 text-slate-400">No pending M-PESA proofs</div>
+                <div className="text-center py-10 text-muted">No pending M-PESA proofs</div>
               ) : (
                 <div className="divide-y divide-slate-50">
                   {pendingPays.map((p) => (
@@ -635,7 +635,7 @@ export default function OwnerDashboard() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                           <p className="font-semibold text-slate-900">{p.full_name}</p>
-                          <p className="text-sm text-slate-500">{p.school}</p>
+                          <p className="text-sm text-muted">{p.school}</p>
                           {p.mpesa_code && (
                             <p className="text-xs font-mono text-emerald-600 mt-1">Code: {p.mpesa_code}</p>
                           )}
@@ -649,7 +649,7 @@ export default function OwnerDashboard() {
                         </div>
                       </div>
                       {p.proof_text && (
-                        <p className="text-xs text-slate-500 mt-2 bg-slate-50 rounded-lg p-2.5 whitespace-pre-wrap">{p.proof_text}</p>
+                        <p className="text-xs text-muted mt-2 bg-slate-50 rounded-lg p-2.5 whitespace-pre-wrap">{p.proof_text}</p>
                       )}
                     </div>
                   ))}

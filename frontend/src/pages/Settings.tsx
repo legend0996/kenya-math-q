@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { apiUrl, authHeaders, fetchMe, getUser } from "../utils/api";
 import { Mail, Lock, GraduationCap } from "lucide-react";
 import { Button } from "../components/ui/Button";
+import { Input, Select } from "../components/ui/Input";
+import { Alert } from "../components/ui/Alert";
 
 const GRADES = ["Grade 7", "Grade 8", "Grade 9", "Form 1", "Form 2", "Form 3", "Form 4"];
 
@@ -87,39 +89,40 @@ export default function Settings() {
 
   if (!me || me.role === "owner") {
     return (
-      <main className="pt-24 min-h-screen px-4">
-        <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-100 p-8 text-center text-slate-500">
-          Sign in to manage your settings. Owners manage their account from the Admin Dashboard.
+      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface px-4">
+        <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-border p-8 text-center">
+          <div className="w-12 h-12 bg-primary-light text-primary-dark rounded-xl flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck size={22} />
+          </div>
+          <p className="text-muted">
+            Sign in to manage your settings. Owners manage their account from the Admin Dashboard.
+          </p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50 px-4 py-12">
+    <main className="pt-[104px] min-h-screen bg-surface px-4 py-12">
       <div className="max-w-xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900">Account Settings</h1>
+        <h1 className="text-2xl font-bold text-foreground">Account Settings</h1>
 
-        {msg.ok && <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl">✓ {msg.ok}</div>}
-        {msg.err && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">⚠ {msg.err}</div>}
+        {msg.ok && <Alert variant="success">{msg.ok}</Alert>}
+        {msg.err && <Alert variant="error">{msg.err}</Alert>}
 
         {me?.role === "student" && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-1 inline-flex items-center gap-2">
+          <div className="bg-white rounded-2xl shadow-soft border border-border p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-1 inline-flex items-center gap-2">
               <GraduationCap size={18} className="text-emerald-600" /> My Class / Form
             </h2>
-            <p className="text-sm text-slate-500 mb-4">
+            <p className="text-sm text-muted mb-4">
               Update your class or form. This affects which questions, instructions and revision materials you get.
             </p>
             <form onSubmit={updateClass} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Current selection</label>
-                <select value={grade} onChange={(e) => setGrade(e.target.value)} required
-                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all">
-                  <option value="" disabled>Choose your grade / form…</option>
-                  {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                </select>
-              </div>
+              <Select label="Current selection" value={grade} onChange={(e) => setGrade(e.target.value)} required>
+                <option value="" disabled>Choose your grade / form…</option>
+                {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
+              </Select>
               <Button type="submit" loading={updatingGrade} icon={<GraduationCap size={15} />}
                 className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100">
                 Save My Class
@@ -128,49 +131,30 @@ export default function Settings() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 inline-flex items-center gap-2">
-            <Mail size={18} className="text-blue-600" /> Change Email
-          </h2>          <form onSubmit={changeEmail} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">New Email</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="new@email.com"
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Current Password</label>
-              <input type="password" required value={emailCurrentPw} onChange={(e) => setEmailCurrentPw(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-            </div>
+        <div className="bg-white rounded-2xl shadow-soft border border-border p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4 inline-flex items-center gap-2">
+            <Mail size={18} className="text-primary-dark" /> Change Email
+          </h2>
+          <form onSubmit={changeEmail} className="space-y-4">
+            <Input label="New Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="new@email.com" icon={<Mail size={16} />} />
+            <Input label="Current Password" type="password" required value={emailCurrentPw} onChange={(e) => setEmailCurrentPw(e.target.value)}
+              placeholder="••••••••" icon={<Lock size={16} />} />
             <Button type="submit">Update Email</Button>
           </form>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 inline-flex items-center gap-2">
-            <Lock size={18} className="text-blue-600" /> Change Password
+        <div className="bg-white rounded-2xl shadow-soft border border-border p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4 inline-flex items-center gap-2">
+            <Lock size={18} className="text-primary-dark" /> Change Password
           </h2>
           <form onSubmit={changePassword} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Current Password</label>
-              <input type="password" required value={pwCurrent.current} onChange={(e) => setPwCurrent({ ...pwCurrent, current: e.target.value })}
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">New Password</label>
-              <input type="password" required value={pwCurrent.next} onChange={(e) => setPwCurrent({ ...pwCurrent, next: e.target.value })}
-                placeholder="At least 8 characters"
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm New Password</label>
-              <input type="password" required value={pwCurrent.confirm} onChange={(e) => setPwCurrent({ ...pwCurrent, confirm: e.target.value })}
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" />
-            </div>
+            <Input label="Current Password" type="password" required value={pwCurrent.current} onChange={(e) => setPwCurrent({ ...pwCurrent, current: e.target.value })}
+              placeholder="••••••••" icon={<Lock size={16} />} />
+            <Input label="New Password" type="password" required value={pwCurrent.next} onChange={(e) => setPwCurrent({ ...pwCurrent, next: e.target.value })}
+              placeholder="At least 8 characters" />
+            <Input label="Confirm New Password" type="password" required value={pwCurrent.confirm} onChange={(e) => setPwCurrent({ ...pwCurrent, confirm: e.target.value })}
+              placeholder="••••••••" />
             <Button type="submit">Update Password</Button>
           </form>
         </div>

@@ -1,102 +1,370 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
-  --primary-light: #dbeafe;
-  --surface: #ffffff;
-  --border: #e2e8f0;
-  --muted: #64748b;
-  --radius: 12px;
-  --font-geist-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --font-geist-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+/* ════════════════════════════════════════════════════════════════
+   Kenya Math Quest — Blue Academic design system
+   Premium educational SaaS theme. Solid colours only — no gradients.
+   ════════════════════════════════════════════════════════════════ */
+@theme {
+  /* ── Typography ── */
+  --font-sans: "Inter", "Manrope", "Source Sans 3", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* ── Radius ── */
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.25rem;
+
+  /* ── Motion ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Shadows (soft, academic) ── */
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05), 0 6px 20px rgba(15, 23, 42, 0.06);
+  --shadow-lifted: 0 12px 32px rgba(15, 23, 42, 0.1);
+  --shadow-overlay: 0 24px 64px rgba(15, 23, 42, 0.16);
+
+  /* ══ Semantic brand tokens ══
+     Primary action  → Royal Blue #1E3A8A
+     Secondary       → Academic Blue #2563EB
+     Accent          → Sky Blue #60A5FA
+     Light Surface   → #DBEAFE */
+  --color-primary: #1e3a8a;
+  --color-primary-dark: #172554;
+  --color-primary-darker: #111b3d;
+  --color-primary-light: #dbeafe;
+  --color-secondary: #2563eb;
+  --color-brandblue: #2563eb;
+  --color-brandblue-dark: #1d4ed8;
+  --color-brandblue-light: #dbeafe;
+  --color-accent: #60a5fa;
+  --color-accent-dark: #3b82f6;
+  --color-accent-light: #dbeafe;
+
+  /* ══ Neutrals ══ */
+  --color-background: #f8fbff;
+  --color-surface: #f1f5f9;
+  --color-surface-soft: #f8fbff;
+  --color-surface-blue: #eff6ff;
+  --color-foreground: #0f172a;
+  --color-muted: #475569;
+  --color-border: #e2e8f0;
+  --color-border-dark: #cbd5e1;
+
+  /* ══ Royal Blue (#1E3A8A) ══ */
+  --color-pumpkin-spice: #1e3a8a;
+  --color-pumpkin-spice-100: #0f2447;
+  --color-pumpkin-spice-200: #172554;
+  --color-pumpkin-spice-300: #1e3a8a;
+  --color-pumpkin-spice-400: #2547a3;
+  --color-pumpkin-spice-500: #2f55b5;
+  --color-pumpkin-spice-600: #60a5fa;
+  --color-pumpkin-spice-700: #7ba0e0;
+  --color-pumpkin-spice-800: #9fb8e8;
+  --color-pumpkin-spice-900: #dbeafe;
+
+  /* ══ Academic Blue (#2563EB) ══ */
+  --color-cool-sky: #2563eb;
+  --color-cool-sky-50: #eff6ff;
+  --color-cool-sky-100: #172554;
+  --color-cool-sky-200: #1d4ed8;
+  --color-cool-sky-300: #2563eb;
+  --color-cool-sky-400: #3b82f6;
+  --color-cool-sky-500: #60a5fa;
+  --color-cool-sky-600: #93c5fd;
+  --color-cool-sky-700: #bfdbfe;
+  --color-cool-sky-800: #dbeafe;
+  --color-cool-sky-900: #eff6ff;
+
+  /* ══ Charcoal (deep navy → slate) ══ */
+  --color-charcoal: #172554;
+  --color-charcoal-100: #f1f5f9;
+  --color-charcoal-200: #172554;
+  --color-charcoal-300: #1e3a8a;
+  --color-charcoal-400: #94a3b8;
+  --color-charcoal-500: #64748b;
+  --color-charcoal-600: #475569;
+  --color-charcoal-700: #334155;
+  --color-charcoal-800: #1e293b;
+  --color-charcoal-900: #0f172a;
+
+  /* ══ Ghost White (subtle blue-grey fills) ══ */
+  --color-ghost-white: #eff6ff;
+  --color-ghost-white-100: #172554;
+  --color-ghost-white-200: #1e3a8a;
+  --color-ghost-white-300: #3b82f6;
+  --color-ghost-white-400: #93c5fd;
+  --color-ghost-white-500: #eff6ff;
+  --color-ghost-white-600: #f1f5f9;
+  --color-ghost-white-700: #f8fbff;
+  --color-ghost-white-800: #fafcff;
+  --color-ghost-white-900: #fcfdff;
+
+  /* ══ Sky Blue accent (#60A5FA) ══ */
+  --color-pale-sky: #60a5fa;
+  --color-pale-sky-100: #1e40af;
+  --color-pale-sky-200: #2563eb;
+  --color-pale-sky-300: #3b82f6;
+  --color-pale-sky-400: #60a5fa;
+  --color-pale-sky-500: #93c5fd;
+  --color-pale-sky-600: #bfdbfe;
+  --color-pale-sky-700: #dbeafe;
+  --color-pale-sky-800: #eff6ff;
+  --color-pale-sky-900: #f8fbff;
+
+  /* ══ Mint Cream (soft blue-white) ══ */
+  --color-mint-cream: #f8fbff;
+  --color-mint-cream-100: #172554;
+  --color-mint-cream-200: #1e3a8a;
+  --color-mint-cream-300: #3b82f6;
+  --color-mint-cream-400: #93c5fd;
+  --color-mint-cream-500: #f8fbff;
+  --color-mint-cream-600: #f9fcff;
+  --color-mint-cream-700: #fbfdff;
+  --color-mint-cream-800: #fcfeff;
+  --color-mint-cream-900: #feffff;
+
+  /* ══ Alice Blue ══ */
+  --color-alice-blue: #eff6ff;
+  --color-alice-blue-100: #172554;
+  --color-alice-blue-200: #1d4ed8;
+  --color-alice-blue-300: #3b82f6;
+  --color-alice-blue-400: #93c5fd;
+  --color-alice-blue-500: #eff6ff;
+  --color-alice-blue-600: #f1f7ff;
+  --color-alice-blue-700: #f4f9ff;
+  --color-alice-blue-800: #f8fbff;
+  --color-alice-blue-900: #fcfdff;
+
+  /* ══ Snow ══ */
+  --color-snow: #f8fbff;
+  --color-snow-100: #172554;
+  --color-snow-200: #1e3a8a;
+  --color-snow-300: #3b82f6;
+  --color-snow-400: #93c5fd;
+  --color-snow-500: #f8fbff;
+  --color-snow-600: #f9fcff;
+  --color-snow-700: #fbfdff;
+  --color-snow-800: #fcfeff;
+  --color-snow-900: #feffff;
+
+  /* ══ Success green ══ */
+  --color-sage-green: #059669;
+  --color-sage-green-100: #064e3b;
+  --color-sage-green-200: #065f46;
+  --color-sage-green-300: #047857;
+  --color-sage-green-400: #059669;
+  --color-sage-green-500: #10b981;
+  --color-sage-green-600: #34d399;
+  --color-sage-green-700: #6ee7b7;
+  --color-sage-green-800: #a7f3d0;
+  --color-sage-green-900: #ecfdf5;
+
+  /* ══ Amethyst (kept as a cool violet-blue) ══ */
+  --color-amethyst-smoke: #6366f1;
+  --color-amethyst-smoke-100: #312e81;
+  --color-amethyst-smoke-200: #3730a3;
+  --color-amethyst-smoke-300: #4338ca;
+  --color-amethyst-smoke-400: #4f46e5;
+  --color-amethyst-smoke-500: #6366f1;
+  --color-amethyst-smoke-600: #818cf8;
+  --color-amethyst-smoke-700: #a5b4fc;
+  --color-amethyst-smoke-800: #c7d2fe;
+  --color-amethyst-smoke-900: #eef2ff;
+
+  /* ══ Default scale aliases → Blue Academic ══
+     slate   → neutral slate (text #0F172A, secondary #475569,
+               border #E2E8F0)
+     emerald → success green   red → danger red
+     violet  → indigo-blue     blue → academic blue (the per-user
+               dashboard theme overrides blue at runtime via theme.ts) */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-emerald-800: #065f46;
+  --color-emerald-900: #064e3b;
+
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+
+  --color-violet-50: #eef2ff;
+  --color-violet-100: #e0e7ff;
+  --color-violet-200: #c7d2fe;
+  --color-violet-300: #a5b4fc;
+  --color-violet-400: #818cf8;
+  --color-violet-500: #6366f1;
+  --color-violet-600: #4f46e5;
+  --color-violet-700: #4338ca;
+  --color-violet-800: #3730a3;
+  --color-violet-900: #312e81;
+
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* ── Base ── */
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* ---- Custom scrollbar ---- */
+::selection {
+  background: var(--color-pumpkin-spice-900);
+  color: var(--color-pumpkin-spice-300);
+}
+
+/* ── Custom scrollbar ── */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--color-background);
 }
 ::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border-radius: 3px;
+  background: var(--color-charcoal-800);
+  border-radius: 999px;
+  border: 2px solid var(--color-background);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: var(--color-charcoal-700);
 }
 
-/* ---- Focus visible ---- */
-*:focus-visible {
-  outline: 2px solid var(--primary);
+/* ── Focus visible ── */
+:focus-visible {
+  outline: 2px solid var(--color-cool-sky-400);
   outline-offset: 2px;
 }
 
-/* ---- Page transition ---- */
+/* ── Page transition (subtle) ── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-
 .page-enter {
-  animation: fadeIn 0.3s ease forwards;
+  animation: fadeIn 0.3s var(--ease-soft) forwards;
 }
 
-/* ---- Gradient text ---- */
-.gradient-text {
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* ── Modal / dropdown entrance ── */
+@keyframes fadeScale {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.animate-fade-scale {
+  animation: fadeScale 0.22s var(--ease-soft) forwards;
 }
 
-/* ---- Glass effect ---- */
-.glass {
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* ── Subtle slide down ── */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slide-down {
+  animation: slideDown 0.25s var(--ease-soft) forwards;
 }
 
-/* ---- Shimmer skeleton ---- */
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
+/* ── Shimmer skeleton (flat, no gradient) ── */
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }
 .skeleton {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-  border-radius: 6px;
+  background: var(--color-ghost-white-500);
+  animation: skeletonPulse 1.6s ease-in-out infinite;
+  border-radius: 8px;
 }
 
-/* ---- Pulse dot ---- */
+/* ── Pulse dot ── */
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 .pulse-dot {
   animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
+/* ── Subtle dot pattern (SVG, solid colour) ── */
+.dot-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1.2' fill='%2360A5FA' fill-opacity='0.18'/%3E%3C/svg%3E");
+}
+
+/* ── Scroll margin for anchored sections ── */
+.section-anchor {
+  scroll-margin-top: 96px;
+}
+
+/* ── Card base used across dashboards ── */
+.card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}

@@ -67,16 +67,16 @@ export default function ParentsManager() {
       <Card padding="none">
         <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="font-bold text-slate-900 flex items-center gap-2">
-            <Users size={18} className="text-slate-400" /> Parents &amp; their Children
+            <Users size={18} className="text-muted" /> Parents &amp; their Children
           </h2>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search parent or child…"
-                className="pl-9 pr-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all w-64"
+                className="pl-9 pr-3 py-2 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all w-64"
               />
             </div>
             <Badge variant="info">{counts.parents} parents</Badge>
@@ -85,7 +85,7 @@ export default function ParentsManager() {
         </div>
 
         {parents.length === 0 ? (
-          <div className="text-center py-14 text-slate-400">
+          <div className="text-center py-14 text-muted">
             <GraduationCap size={32} className="mx-auto mb-2 opacity-30" />
             <p>No parents found</p>
           </div>
@@ -94,12 +94,12 @@ export default function ParentsManager() {
             {parents.map((p) => (
               <div key={p.id} className="px-6 py-4">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <div className="w-9 h-9 rounded-full bg-violet-100 text-violet-700 text-sm font-bold flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-primary-light text-primary-dark text-sm font-bold flex items-center justify-center shrink-0">
                     {p.full_name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-900">{p.full_name}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-muted">
                       {p.email}{p.phone ? ` · ${p.phone}` : ""}{p.username ? ` · @${p.username}` : ""}
                     </p>
                   </div>
@@ -109,10 +109,10 @@ export default function ParentsManager() {
                   <div className="mt-3 ml-12 grid sm:grid-cols-2 gap-2">
                     {p.children.map((c) => (
                       <div key={c.student_id} className="flex items-center gap-2 text-sm bg-slate-50 rounded-lg px-3 py-2">
-                        <GraduationCap size={14} className="text-blue-500 shrink-0" />
+                        <GraduationCap size={14} className="text-primary shrink-0" />
                         <div className="min-w-0">
                           <p className="font-medium text-slate-800 truncate">{c.student_name}</p>
-                          <p className="text-xs text-slate-400 truncate">
+                          <p className="text-xs text-muted truncate">
                             {c.student_email}
                             {c.grade ? ` · ${c.grade}` : ""}
                             {c.school ? ` · ${c.school}` : ""}

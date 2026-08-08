@@ -301,7 +301,7 @@ export default function Exam() {
     };
   }, [phase.name, saveDraft, handleSubmit]);
 
-  // 🛡️ Anti-screenshot: block right-click, screenshot/print shortcuts, copying
+  // Anti-screenshot: block right-click, screenshot/print shortcuts, copying
   // and keep the exam text non-selectable. (Best-effort hardening.)
   useEffect(() => {
     if (phase.name !== "running") return;
@@ -378,7 +378,7 @@ export default function Exam() {
 
   if (phase.name === "blocked") {
     return (
-      <main className="pt-16 min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 max-w-md w-full text-center">
           <Lock size={40} className="text-amber-400 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-slate-900 mb-2">Exam Locked</h1>
@@ -393,7 +393,7 @@ export default function Exam() {
 
   if (phase.name === "no-questions") {
     return (
-      <main className="pt-16 min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="text-center">
           <AlertTriangle size={36} className="text-amber-400 mx-auto mb-3" />
           <p className="font-semibold text-slate-700">No questions available for your grade yet</p>
@@ -408,7 +408,7 @@ export default function Exam() {
 
   if (phase.name === "not-attempted") {
     return (
-      <main className="pt-16 min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="text-center">
           <AlertTriangle size={36} className="text-amber-400 mx-auto mb-3" />
           <p className="font-semibold text-slate-700">You didn&apos;t answer any questions</p>
@@ -430,16 +430,16 @@ export default function Exam() {
 
   if (phase.name === "instructions") {
     return (
-      <main className="pt-16 min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-8 max-w-xl w-full">
-          <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-5 text-blue-600">
+      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-primary/20 p-8 max-w-xl w-full">
+          <div className="w-12 h-12 bg-primary-light rounded-2xl flex items-center justify-center mb-5 text-primary-dark">
             <AlertTriangle size={24} />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 mb-1">Contest Instructions</h1>
           <p className="text-sm text-slate-500 mb-6">
             Please read these instructions carefully. The timer only starts after you agree.
           </p>
-          <div className="bg-slate-50 border border-slate-100 rounded-xl p-5 max-h-80 overflow-y-auto whitespace-pre-wrap text-sm text-slate-700 leading-relaxed">
+          <div className="bg-surface border border-slate-100 rounded-xl p-5 max-h-80 overflow-y-auto whitespace-pre-wrap text-sm text-slate-700 leading-relaxed">
             {phase.text}
           </div>
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl mt-5 mb-5 text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700">
@@ -460,9 +460,9 @@ export default function Exam() {
   if (phase.name === "continue") {
     const { answered, time, total } = phase.info;
     return (
-      <main className="pt-16 min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-10 max-w-lg w-full text-center">
-          <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5 text-blue-600">
+      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-primary/20 p-10 max-w-lg w-full text-center">
+          <div className="w-16 h-16 bg-primary-light rounded-2xl flex items-center justify-center mx-auto mb-5 text-primary-dark">
             <Play size={28} />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Resume Your Exam</h1>
@@ -470,7 +470,7 @@ export default function Exam() {
             Your progress was saved as a draft. Continue from where you left off — the timer resumes too.
           </p>
           <div className="grid grid-cols-3 gap-3 mb-8">
-            <div className="bg-slate-50 rounded-xl p-4">
+            <div className="bg-surface rounded-xl p-4">
               <p className="text-xs text-slate-400 font-medium">Questions</p>
               <p className="text-xl font-bold text-slate-900 mt-1">{questions.length}</p>
             </div>
@@ -495,7 +495,7 @@ export default function Exam() {
 
   if (phase.name === "submitted") {
     return (
-      <main className="pt-16 min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-10 max-w-md w-full text-center">
           <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <CheckCircle2 size={30} className="text-emerald-600" />
@@ -527,7 +527,7 @@ export default function Exam() {
   const isOpen = !isMCQ || opts.length === 0;
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50 exam-secure">
+    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface exam-secure">
       <div className="max-w-3xl mx-auto px-4 py-8">
 
         {/* Top bar */}
@@ -538,7 +538,7 @@ export default function Exam() {
               <span className="text-slate-400"> / {questions.length}</span>
             </div>
             <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+              <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
             </div>
             <span className="text-xs text-slate-400">{answeredCount} answered</span>
           </div>
@@ -572,7 +572,7 @@ export default function Exam() {
         {/* Question card */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
           <div className="flex items-start gap-3 mb-6">
-            <span className="w-8 h-8 rounded-lg bg-blue-600 text-white text-sm font-bold flex items-center justify-center shrink-0">
+            <span className="w-8 h-8 rounded-lg bg-primary-dark text-white text-sm font-bold flex items-center justify-center shrink-0">
               {currentIndex + 1}
             </span>
             <div className="flex-1">
@@ -590,7 +590,7 @@ export default function Exam() {
             {isOpen ? (
               <textarea
                 rows={5}
-                className="w-full px-4 py-3 text-sm bg-slate-50 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
+                className="w-full px-4 py-3 text-sm bg-surface rounded-xl border border-slate-200 focus:border-primary-dark focus:ring-4 focus:ring-primary-light outline-none transition-all resize-none"
                 placeholder="Type your final answer here — this is what will be marked…"
                 value={answers[q.id] || ""}
                 onChange={(e) => handleAnswer(q.id, e.target.value)}
@@ -606,17 +606,17 @@ export default function Exam() {
                       onClick={() => handleAnswer(q.id, opt)}
                       className={`w-full text-left flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all duration-150 ${
                         selected
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+                          ? "border-primary-dark bg-primary-light text-primary-dark"
+                          : "border-slate-200 hover:border-primary-light hover:bg-surface"
                       }`}
                     >
                       <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 transition-colors ${
-                        selected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                        selected ? "bg-primary-dark text-white" : "bg-slate-100 text-slate-500"
                       }`}>
                         {OPTION_LABELS[i]}
                       </span>
                       <span className="font-medium">{opt}</span>
-                      {selected && <CheckCircle2 size={16} className="ml-auto text-blue-500 shrink-0" />}
+                      {selected && <CheckCircle2 size={16} className="ml-auto text-primary shrink-0" />}
                     </button>
                   );
                 })}

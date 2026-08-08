@@ -220,7 +220,7 @@ export default function ResultsManagement() {
   };
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50">
+    <main className="bg-transparent">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         <h1 className="text-2xl font-bold mb-2">Results Management</h1>
         {feedback && (
@@ -237,14 +237,14 @@ export default function ResultsManagement() {
           <Card>
             <h2 className="font-bold text-slate-900 mb-4">Contests/Events</h2>
             {contests.length === 0 ? (
-              <div className="text-center py-10 text-slate-400">No contests found.</div>
+              <div className="text-center py-10 text-muted">No contests found.</div>
             ) : (
               <div className="divide-y divide-slate-50">
                 {contests.map((c) => (
                   <div key={c.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold text-slate-900">{c.name}</p>
-                      <p className="text-sm text-slate-500">{c.year}</p>
+                      <p className="text-sm text-muted">{c.year}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <Badge variant={c.results_status === "released" ? "success" : "warning"}>
@@ -274,9 +274,9 @@ export default function ResultsManagement() {
           <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="font-bold text-slate-900 flex items-center gap-2">
-                <RotateCcw size={18} className="text-blue-600" /> Allow Retake
+                <RotateCcw size={18} className="text-primary-dark" /> Allow Retake
               </h2>
-              <p className="text-sm text-slate-500 mt-0.5">
+              <p className="text-sm text-muted mt-0.5">
                 Select students who completed the exam, then reset their attempt so they can repeat it.
               </p>
             </div>
@@ -284,7 +284,7 @@ export default function ResultsManagement() {
               <select
                 value={retakeContestId ?? ""}
                 onChange={(e) => setRetakeContestId(Number(e.target.value))}
-                className="px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                className="px-3 py-2 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
               >
                 {contests.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -297,17 +297,17 @@ export default function ResultsManagement() {
           </div>
 
           {loadingParts ? (
-            <div className="py-12 text-center text-slate-400">Loading students…</div>
+            <div className="py-12 text-center text-muted">Loading students…</div>
           ) : participants.length === 0 ? (
-            <div className="text-center py-12 text-slate-400">No registered students for this contest yet.</div>
+            <div className="text-center py-12 text-muted">No registered students for this contest yet.</div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                    <tr className="text-left text-xs uppercase tracking-wider text-muted border-b border-slate-100">
                       <th className="px-6 py-3 w-10">
-                        <input type="checkbox" checked={allChecked} onChange={toggleAll} className="w-4 h-4 accent-blue-600" />
+                        <input type="checkbox" checked={allChecked} onChange={toggleAll} className="w-4 h-4 accent-primary-dark" />
                       </th>
                       <th className="px-4 py-3">Student</th>
                       <th className="px-4 py-3">School</th>
@@ -328,13 +328,13 @@ export default function ResultsManagement() {
                               checked={checked.has(p.id)}
                               disabled={!isDone}
                               onChange={() => toggleOne(p.id)}
-                              className="w-4 h-4 accent-blue-600 disabled:opacity-30"
+                              className="w-4 h-4 accent-primary-dark disabled:opacity-30"
                             />
                           </td>
                           <td className="px-4 py-3">
                             <p className="font-semibold text-slate-900">{p.full_name}</p>
                           </td>
-                          <td className="px-4 py-3 text-slate-600">{p.school || "—"}</td>
+                          <td className="px-4 py-3 text-foreground">{p.school || "—"}</td>
                           <td className="px-4 py-3"><Badge variant="default">{p.grade || "—"}</Badge></td>
                           <td className="px-4 py-3 text-center font-semibold text-slate-900">{isDone ? p.score : "—"}</td>
                           <td className="px-4 py-3 text-center">
@@ -351,7 +351,7 @@ export default function ResultsManagement() {
                   </tbody>
                 </table>
               </div>
-              <div className="px-6 py-3 text-xs text-slate-400">
+              <div className="px-6 py-3 text-xs text-muted">
                 {checked.size} selected · {doneList.length} completed
               </div>
             </>
@@ -474,10 +474,10 @@ export default function ResultsManagement() {
 
         {/* Confirmation Modal */}
         {showConfirm && selected && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-            <div className="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal-900/40">
+            <div className="bg-white rounded-2xl shadow-overlay p-8 max-w-sm w-full">
               <h3 className="font-bold text-lg mb-2">Release Results?</h3>
-              <p className="mb-4 text-slate-600">Are you sure you want to release results for <span className="font-semibold">{selected.name}</span>?</p>
+              <p className="mb-4 text-foreground">Are you sure you want to release results for <span className="font-semibold">{selected.name}</span>?</p>
               <div className="flex gap-3 justify-end">
                 <Button variant="ghost" onClick={() => setShowConfirm(false)}>Cancel</Button>
                 <Button loading={releasing} onClick={() => releaseResults(selected.id)}>

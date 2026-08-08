@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users, GraduationCap, School, Trophy, Award,
-  LogOut, Link2, Unlink, CheckCircle2, AlertCircle, UserPlus, Eye,
+  LogOut, Link2, Unlink, UserPlus, Eye,
   Smartphone, Receipt, X,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
@@ -215,15 +215,21 @@ export default function ParentDashboard() {
   const registered = children.filter((c) => c.registered).length;
 
   return (
-    <main className="pt-16 min-h-screen bg-slate-50">
+    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
 
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <p className="text-sm font-medium text-slate-500 mb-1">Welcome back</p>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Parent Dashboard</h1>
-            <p className="text-sm text-slate-500 mt-1">Track {parentName}&apos;s children on Kenya Math Quest</p>
+            <p className="text-sm font-medium text-muted mb-1">Welcome back</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Parent Dashboard</h1>
+            <p className="text-sm text-muted mt-1">Track {parentName}&apos;s children on Kenya Math Quest</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" icon={<LogOut size={16} />}
+              className="text-red-500 hover:bg-red-50 hover:text-red-600"
+              onClick={() => { localStorage.removeItem("token"); window.location.href = "/login"; }}>
+              Logout
+            </Button>
           </div>
           <Button variant="ghost" icon={<LogOut size={16} />}
             className="text-red-500 hover:bg-red-50 hover:text-red-600"
@@ -232,42 +238,33 @@ export default function ParentDashboard() {
           </Button>
         </div>
 
-        {/* Feedback */}
         {feedback && (
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl mb-6 text-sm font-medium ${
-            feedback.type === "success"
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-              : "bg-red-50 border border-red-200 text-red-700"
-          }`}>
-            {feedback.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-            {feedback.msg}
+          <div className="mb-6">
+            <Alert variant={feedback.type}>{feedback.msg}</Alert>
           </div>
         )}
 
-        {/* Stats */}
         <div className="grid sm:grid-cols-3 gap-4 mb-8">
           <StatCard label="Linked Children" value={children.length} icon={<Users size={22} />} />
-          <StatCard label="Contests Entered" value={totalContests} icon={<Trophy size={22} />} accent="text-violet-600" />
+          <StatCard label="Contests Entered" value={totalContests} icon={<Trophy size={22} />} accent="text-brandblue-dark" />
           <StatCard label="Certificates" value={totalCerts} icon={<Award size={22} />} accent="text-amber-600" />
         </div>
 
-        {/* Current contest banner */}
-        <Card className="mb-8 border-l-4 border-l-blue-500">
+        <Card className="mb-8 border-l-4 border-l-primary-dark">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <p className="text-sm text-slate-500">Current contest</p>
-              <h3 className="font-bold text-slate-900">{contest ? contest.name : "No contest published yet"}</h3>
+              <p className="text-sm text-muted">Current contest</p>
+              <h3 className="font-bold text-foreground">{contest ? contest.name : "No contest published yet"}</h3>
             </div>
             {contest && <Badge variant="info">{registered} child(ren) registered</Badge>}
           </div>
         </Card>
 
-        {/* Link child */}
         <Card className="mb-8">
-          <h2 className="font-bold text-slate-900 mb-1 flex items-center gap-2">
-            <Link2 size={18} className="text-blue-600" /> Link a Child
+          <h2 className="font-bold text-foreground mb-1 flex items-center gap-2">
+            <Link2 size={18} className="text-primary-dark" /> Link a Child
           </h2>
-          <p className="text-sm text-slate-500 mb-4">
+          <p className="text-sm text-muted mb-4">
             Enter your child&apos;s account email to link them to your account. You can link more than one child.
           </p>
           <form onSubmit={handleLink} className="flex flex-col sm:flex-row gap-3">
@@ -277,54 +274,36 @@ export default function ParentDashboard() {
               required
               value={linkEmail}
               onChange={(e) => setLinkEmail(e.target.value)}
-              className="flex-1 px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+              className="flex-1 px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-4 focus:ring-pumpkin-spice-900/60 outline-none transition-all"
             />
             <Button type="submit" loading={linking} icon={<Link2 size={15} />}>
               Link Child
             </Button>
           </form>
 
-          <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="mt-4 pt-4 border-t border-border">
             {!showRegister ? (
               <Button variant="outline" icon={<UserPlus size={15} />} onClick={() => setShowRegister(true)}>
                 Register a Child (create new student account)
               </Button>
             ) : (
               <form onSubmit={handleRegisterChild} className="space-y-3">
-                <p className="text-sm font-semibold text-slate-700">Create &amp; link a new student account for your child</p>
+                <p className="text-sm font-semibold text-foreground">Create &amp; link a new student account for your child</p>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <input
-                    placeholder="CHILD FULL NAME" required value={regForm.full_name}
-                    onChange={(e) => setRegForm({ ...regForm, full_name: e.target.value.toUpperCase() })}
-                    className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  />
-                  <select
-                    value={regForm.grade}
-                    onChange={(e) => setRegForm({ ...regForm, grade: e.target.value })}
-                    className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  >
+                  <Input placeholder="CHILD FULL NAME" required value={regForm.full_name}
+                    onChange={(e) => setRegForm({ ...regForm, full_name: e.target.value.toUpperCase() })} />
+                  <Select value={regForm.grade}
+                    onChange={(e) => setRegForm({ ...regForm, grade: e.target.value })}>
                     {GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                  <input
-                    type="email" placeholder="child@email.com" required value={regForm.email}
-                    onChange={(e) => setRegForm({ ...regForm, email: e.target.value.toLowerCase() })}
-                    className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  />
-                  <input
-                    placeholder="Username (optional)" value={regForm.username}
-                    onChange={(e) => setRegForm({ ...regForm, username: e.target.value })}
-                    className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  />
-                  <input
-                    placeholder="SCHOOL NAME" value={regForm.school}
-                    onChange={(e) => setRegForm({ ...regForm, school: e.target.value.toUpperCase() })}
-                    className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  />
-                  <input
-                    type="password" placeholder="Password" required value={regForm.password}
-                    onChange={(e) => setRegForm({ ...regForm, password: e.target.value })}
-                    className="px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  />
+                  </Select>
+                  <Input type="email" placeholder="child@email.com" required value={regForm.email}
+                    onChange={(e) => setRegForm({ ...regForm, email: e.target.value.toLowerCase() })} />
+                  <Input placeholder="Username (optional)" value={regForm.username}
+                    onChange={(e) => setRegForm({ ...regForm, username: e.target.value })} />
+                  <Input placeholder="SCHOOL NAME" value={regForm.school}
+                    onChange={(e) => setRegForm({ ...regForm, school: e.target.value.toUpperCase() })} />
+                  <Input type="password" placeholder="Password" required value={regForm.password}
+                    onChange={(e) => setRegForm({ ...regForm, password: e.target.value })} />
                 </div>
                 <div className="flex gap-2">
                   <Button type="submit" loading={regBusy} icon={<UserPlus size={15} />}>Register Child</Button>
@@ -335,27 +314,26 @@ export default function ParentDashboard() {
           </div>
         </Card>
 
-        {/* Children */}
         {children.length === 0 ? (
           <Card className="text-center py-14">
-            <GraduationCap size={40} className="text-slate-200 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">No children linked yet</p>
-            <p className="text-sm text-slate-400 mt-1">Link your child above to see their progress</p>
+            <GraduationCap size={40} className="text-charcoal-200 mx-auto mb-3" />
+            <p className="text-muted font-medium">No children linked yet</p>
+            <p className="text-sm text-muted mt-1">Link your child above to see their progress</p>
           </Card>
         ) : (
           <div className="space-y-4">
             {children.map((c) => (
               <Card key={c.id} className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-700 text-lg font-bold flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 rounded-full bg-primary-light text-primary-dark text-lg font-bold flex items-center justify-center shrink-0">
                     {c.full_name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-slate-900">{c.full_name}</h3>
+                      <h3 className="font-bold text-foreground">{c.full_name}</h3>
                       <Badge variant="info">{c.grade || "—"}</Badge>
                     </div>
-                    <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1">
+                    <p className="text-sm text-muted mt-0.5 flex items-center gap-1">
                       <School size={13} /> {c.school || "No school"}
                     </p>
                     <div className="flex items-center gap-2 flex-wrap mt-2">
@@ -408,52 +386,40 @@ export default function ParentDashboard() {
             </div>
           </div>
         )}
-
-        {manualFor && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-            <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-bold text-lg text-slate-900">Manual Payment</h3>
-                <button onClick={() => setManualFor(null)} className="text-slate-400 hover:text-slate-600">
-                  <X size={18} />
-                </button>
-              </div>
-              <p className="text-sm text-slate-500 mb-4">
-                Pay M-PESA to the contest account, then enter the transaction code below. An administrator
-                will review and confirm your payment.
-              </p>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">M-PESA Transaction Code</label>
-                  <input
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value)}
-                    placeholder="e.g. SDF3A2B4C5"
-                    required
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Note (optional)</label>
-                  <textarea
-                    rows={3}
-                    value={manualNote}
-                    onChange={(e) => setManualNote(e.target.value)}
-                    placeholder="Anything the admin should know (payer name, etc.)"
-                    className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
-                  />
-                </div>
-                <div className="flex gap-3 justify-end pt-1">
-                  <Button variant="ghost" onClick={() => setManualFor(null)}>Cancel</Button>
-                  <Button loading={manualBusy} icon={<Receipt size={15} />} onClick={submitManual}>
-                    Submit Payment
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      <Modal
+        open={!!manualFor}
+        onClose={() => setManualFor(null)}
+        title="Manual Payment"
+        subtitle={`Paying for ${manualFor?.full_name ?? "your child"}`}
+      >
+        <p className="text-sm text-muted mb-4">
+          Pay M-PESA to the contest account, then enter the transaction code below. An administrator
+          will review and confirm your payment.
+        </p>
+        <div className="space-y-3">
+          <Input
+            label="M-PESA Transaction Code"
+            value={manualCode}
+            onChange={(e) => setManualCode(e.target.value)}
+            placeholder="e.g. SDF3A2B4C5"
+            required
+          />
+          <Input
+            label="Note (optional)"
+            value={manualNote}
+            onChange={(e) => setManualNote(e.target.value)}
+            placeholder="Anything the admin should know (payer name, etc.)"
+          />
+          <div className="flex gap-3 justify-end pt-1">
+            <Button variant="ghost" onClick={() => setManualFor(null)}>Cancel</Button>
+            <Button loading={manualBusy} icon={<Receipt size={15} />} onClick={submitManual}>
+              Submit Payment
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </main>
   );
 }

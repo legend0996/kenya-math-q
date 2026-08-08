@@ -454,7 +454,7 @@ export default function CertificateManager() {
         <select
           value={contestId || ""}
           onChange={(e) => e.target.value && loadContest(Number(e.target.value))}
-          className="mt-3 w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+          className="mt-3 w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all"
         >
           <option value="">-- Select Contest --</option>
           {contests.map((c) => (
@@ -469,7 +469,7 @@ export default function CertificateManager() {
           <Card padding="none">
             <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-bold text-slate-900 flex items-center gap-2">
-                <FileText size={18} className="text-blue-600" /> 2 · Design Certificate
+                <FileText size={18} className="text-primary-dark" /> 2 · Design Certificate
                 {template.published ? <Badge variant="success" dot>In Use</Badge> : <Badge variant="warning">Draft</Badge>}
               </h2>
               <div className="flex items-center gap-2 flex-wrap">
@@ -477,9 +477,9 @@ export default function CertificateManager() {
                 <Button size="sm" variant="outline" onClick={redo} icon={<Redo2 size={14} />}>Redo</Button>
                 <Button size="sm" variant="outline" onClick={resetLayout}>Reset Layout</Button>
                 <div className="flex items-center gap-1 text-sm">
-                  <span className="text-slate-400">Zoom</span>
+                  <span className="text-muted">Zoom</span>
                   <input type="range" min={0.5} max={1.5} step={0.1} value={zoom}
-                    onChange={(e) => setZoom(Number(e.target.value))} className="w-24 accent-blue-600" />
+                    onChange={(e) => setZoom(Number(e.target.value))} className="w-24 accent-primary-dark" />
                 </div>
                 {!template.published ? (
                   <Button size="sm" loading={saving} icon={<Lock size={14} />} onClick={publish}>Publish</Button>
@@ -492,39 +492,39 @@ export default function CertificateManager() {
             <div className="grid xl:grid-cols-[220px_1fr_260px]">
               {/* Toolbar */}
               <div className="p-4 border-b xl:border-b-0 xl:border-r border-slate-100 space-y-2">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Add Element</p>
-                <button onClick={addText} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-slate-50 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                <p className="text-xs font-bold text-muted uppercase tracking-wide mb-3">Add Element</p>
+                <button onClick={addText} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-surface hover:bg-primary-light hover:text-primary-dark transition-colors">
                   <Type size={15} /> Text
                 </button>
-                <button onClick={() => imageInputRef.current?.click()} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-slate-50 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                <button onClick={() => imageInputRef.current?.click()} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-surface hover:bg-primary-light hover:text-primary-dark transition-colors">
                   {uploading === "image" ? <Spinner size={15} /> : <ImagePlus size={15} />} Image
                 </button>
                 <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
                   onChange={(e) => e.target.files?.[0] && addImage(e.target.files[0])} />
-                <button onClick={addRect} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-slate-50 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                <button onClick={addRect} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-surface hover:bg-primary-light hover:text-primary-dark transition-colors">
                   <Square size={15} /> Shape
                 </button>
-                <button onClick={addLine} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-slate-50 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                <button onClick={addLine} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg bg-surface hover:bg-primary-light hover:text-primary-dark transition-colors">
                   <Minus size={15} /> Line
                 </button>
 
                 <div className="border-t border-slate-100 pt-3 mt-3">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Dynamic Tokens</p>
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                  <p className="text-xs font-bold text-muted uppercase tracking-wide mb-2">Dynamic Tokens</p>
+                  <p className="text-[11px] text-muted leading-relaxed">
                     Insert these in any text element. They are filled per-student at generation time.
                   </p>
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {TOKENS.map((t) => <code key={t} className="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-600">{t}</code>)}
+                    {TOKENS.map((t) => <code key={t} className="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-foreground">{t}</code>)}
                   </div>
                 </div>
 
                 <div className="border-t border-slate-100 pt-3 mt-3">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Page</p>
-                  <label className="flex items-center justify-between text-sm text-slate-600">
+                  <p className="text-xs font-bold text-muted uppercase tracking-wide mb-2">Page</p>
+                  <label className="flex items-center justify-between text-sm text-foreground">
                     Background
                     <input type="color" value={template.bg_color}
                       onChange={(e) => setTemplate((t) => ({ ...t, bg_color: e.target.value }))}
-                      className="h-7 w-12 rounded border border-slate-200 cursor-pointer" />
+                      className="h-7 w-12 rounded border border-border cursor-pointer" />
                   </label>
                 </div>
               </div>
@@ -562,7 +562,7 @@ export default function CertificateManager() {
                             key={el.id}
                             {...common}
                             onPointerDown={(e) => onPointerDown(e, el.id, "move")}
-                            className={`absolute cursor-move rounded-sm ${isSel ? "ring-2 ring-blue-500" : ""}`}
+                            className={`absolute cursor-move rounded-sm ${isSel ? "ring-2 ring-primary" : ""}`}
                             style={{
                               ...common.style,
                               backgroundColor: el.fill === "transparent" ? "transparent" : el.fill || "transparent",
@@ -580,7 +580,7 @@ export default function CertificateManager() {
                             key={el.id}
                             {...common}
                             onPointerDown={(e) => onPointerDown(e, el.id, "move")}
-                            className={`absolute cursor-move ${isSel ? "ring-2 ring-blue-500" : ""}`}
+                            className={`absolute cursor-move ${isSel ? "ring-2 ring-primary" : ""}`}
                             style={{
                               ...common.style,
                               height: 0,
@@ -598,7 +598,7 @@ export default function CertificateManager() {
                             key={el.id}
                             {...common}
                             onPointerDown={(e) => onPointerDown(e, el.id, "move")}
-                            className={`absolute cursor-move ${isSel ? "ring-2 ring-blue-500" : ""}`}
+                            className={`absolute cursor-move ${isSel ? "ring-2 ring-primary" : ""}`}
                           >
                             <img src={apiUrl(el.url!)} alt="" draggable={false} className="w-full h-full object-contain" />
                           </div>
@@ -611,7 +611,7 @@ export default function CertificateManager() {
                           {...common}
                           onPointerDown={(e) => onPointerDown(e, el.id, "move")}
                           onDoubleClick={(e) => { e.stopPropagation(); beginEdit(el.id); }}
-                          className={`absolute cursor-move ${isSel ? "ring-1 ring-blue-500" : ""}`}
+                          className={`absolute cursor-move ${isSel ? "ring-1 ring-primary" : ""}`}
                           style={{
                             ...common.style,
                             display: "flex",
@@ -645,12 +645,12 @@ export default function CertificateManager() {
                     {selected && selected.type !== "line" && (
                       <div
                         onPointerDown={(e) => onPointerDown(e, selected.id, "resize")}
-                        className="absolute w-3 h-3 bg-blue-600 rounded-full border-2 border-white cursor-nwse-resize z-10"
+                        className="absolute w-3 h-3 bg-primary-dark rounded-full border-2 border-white cursor-nwse-resize z-10"
                         style={{ left: `calc(${selected.x * 100}% + ${selected.w * 100}% - 6px)`, top: `calc(${selected.y * 100}% + ${selected.h * 100}% - 6px)` }}
                       />
                     )}
                     {!template.elements.length && (
-                      <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">
+                      <div className="absolute inset-0 flex items-center justify-center text-muted text-sm">
                         Use the toolbar to add text, images, shapes and lines.
                       </div>
                     )}
@@ -661,7 +661,7 @@ export default function CertificateManager() {
               {/* Properties panel */}
               <div className="p-4 border-t xl:border-t-0 xl:border-l border-slate-100">
                 {!selected ? (
-                  <div className="text-center text-slate-400 text-sm py-10">
+                  <div className="text-center text-muted text-sm py-10">
                     <MousePointer2 size={28} className="mx-auto mb-2" />
                     Select an element to edit its properties.<br />
                     Drag to move · handle to resize · double-click text to edit · Del to remove.
@@ -669,7 +669,7 @@ export default function CertificateManager() {
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold text-slate-700 uppercase tracking-wide">{selected.type} · {selected.id.slice(0, 5)}</p>
+                      <p className="text-sm font-bold text-foreground uppercase tracking-wide">{selected.type} · {selected.id.slice(0, 5)}</p>
                       <button onClick={() => { applyElements(template.elements.filter((el) => el.id !== selected.id)); setSelectedId(null); }}
                         className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={15} /></button>
                     </div>
@@ -677,46 +677,46 @@ export default function CertificateManager() {
                     {selected.type === "text" && (
                       <>
                         <div>
-                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Text (tokens allowed)</label>
+                          <label className="text-xs font-semibold text-muted mb-1 block">Text (tokens allowed)</label>
                           <textarea value={selected.text || ""} rows={3}
                             onChange={(e) => updateElement(selected.id, { text: e.target.value })}
-                            className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 outline-none" />
+                            className="w-full px-3 py-2 text-sm bg-white rounded-xl border border-border focus:border-primary-dark outline-none" />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-xs font-semibold text-slate-500 mb-1 block">Font size</label>
+                            <label className="text-xs font-semibold text-muted mb-1 block">Font size</label>
                             <input type="number" min={6} max={120} value={selected.fontSize || 16}
                               onChange={(e) => updateElement(selected.id, { fontSize: Number(e.target.value) })}
-                              className="w-full px-2 py-1.5 text-sm bg-white rounded-lg border border-slate-200 outline-none" />
+                              className="w-full px-2 py-1.5 text-sm bg-white rounded-lg border border-border outline-none" />
                           </div>
                           <div>
-                            <label className="text-xs font-semibold text-slate-500 mb-1 block">Font</label>
+                            <label className="text-xs font-semibold text-muted mb-1 block">Font</label>
                             <select value={selected.fontFamily || "Arial"}
                               onChange={(e) => updateElement(selected.id, { fontFamily: e.target.value })}
-                              className="w-full px-2 py-1.5 text-sm bg-white rounded-lg border border-slate-200 outline-none">
+                              className="w-full px-2 py-1.5 text-sm bg-white rounded-lg border border-border outline-none">
                               {FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
                             </select>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          <label className="flex items-center gap-2 text-sm text-slate-600">
+                          <label className="flex items-center gap-2 text-sm text-foreground">
                             <input type="checkbox" checked={!!selected.bold} onChange={(e) => updateElement(selected.id, { bold: e.target.checked })} /> Bold
                           </label>
-                          <label className="flex items-center gap-2 text-sm text-slate-600">
+                          <label className="flex items-center gap-2 text-sm text-foreground">
                             <input type="checkbox" checked={!!selected.italic} onChange={(e) => updateElement(selected.id, { italic: e.target.checked })} /> Italic
                           </label>
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Color</label>
+                          <label className="text-xs font-semibold text-muted mb-1 block">Color</label>
                           <input type="color" value={selected.color || "#000"} onChange={(e) => updateElement(selected.id, { color: e.target.value })}
-                            className="h-8 w-16 rounded border border-slate-200 cursor-pointer" />
+                            className="h-8 w-16 rounded border border-border cursor-pointer" />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Align</label>
+                          <label className="text-xs font-semibold text-muted mb-1 block">Align</label>
                           <div className="flex gap-1">
                             {(["left", "center", "right"] as const).map((a) => (
                               <button key={a} onClick={() => updateElement(selected.id, { align: a })}
-                                className={`px-3 py-1 text-xs rounded-lg capitalize ${selected.align === a ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>{a}</button>
+                                className={`px-3 py-1 text-xs rounded-lg capitalize ${selected.align === a ? "bg-primary-light text-primary-dark" : "bg-slate-100 text-foreground"}`}>{a}</button>
                             ))}
                           </div>
                         </div>
@@ -726,20 +726,20 @@ export default function CertificateManager() {
                     {selected.type === "image" && (
                       <div className="space-y-3">
                         <div className="flex items-center gap-3">
-                          <img src={apiUrl(selected.url!)} alt="" className="w-16 h-16 object-contain bg-slate-50 rounded-lg border border-slate-200" />
-                          <p className="text-xs text-slate-500 break-all">{selected.url?.split("/").pop()}</p>
+                          <img src={apiUrl(selected.url!)} alt="" className="w-16 h-16 object-contain bg-surface rounded-lg border border-border" />
+                          <p className="text-xs text-muted break-all">{selected.url?.split("/").pop()}</p>
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Width (fraction)</label>
+                          <label className="text-xs font-semibold text-muted mb-1 block">Width (fraction)</label>
                           <input type="range" min={0.02} max={0.8} step={0.01} value={selected.w}
                             onChange={(e) => { const w = Number(e.target.value); updateElement(selected.id, { w, h: (selected.h || 0.1) }); }}
-                            className="w-full accent-blue-600" />
+                            className="w-full accent-primary-dark" />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Height (fraction)</label>
+                          <label className="text-xs font-semibold text-muted mb-1 block">Height (fraction)</label>
                           <input type="range" min={0.02} max={0.5} step={0.01} value={selected.h}
                             onChange={(e) => updateElement(selected.id, { h: Number(e.target.value) })}
-                            className="w-full accent-blue-600" />
+                            className="w-full accent-primary-dark" />
                         </div>
                         <Button size="sm" variant="outline" onClick={() => { applyElements(template.elements.filter((el) => el.id !== selected.id)); setSelectedId(null); }}>
                           Remove image
@@ -751,30 +751,30 @@ export default function CertificateManager() {
                       <>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-xs font-semibold text-slate-500 mb-1 block">Fill</label>
+                            <label className="text-xs font-semibold text-muted mb-1 block">Fill</label>
                             <input type="color" value={selected.fill === "transparent" ? "#ffffff" : selected.fill || "#ffffff"}
                               onChange={(e) => updateElement(selected.id, { fill: e.target.value })}
-                              className="h-8 w-14 rounded border border-slate-200 cursor-pointer" />
-                            <label className="flex items-center gap-1.5 mt-1 text-xs text-slate-500">
+                              className="h-8 w-14 rounded border border-border cursor-pointer" />
+                            <label className="flex items-center gap-1.5 mt-1 text-xs text-muted">
                               <input type="checkbox" checked={selected.fill === "transparent"}
                                 onChange={(e) => updateElement(selected.id, { fill: e.target.checked ? "transparent" : "#e2e8f0" })} /> Transparent
                             </label>
                           </div>
                           <div>
-                            <label className="text-xs font-semibold text-slate-500 mb-1 block">Border</label>
+                            <label className="text-xs font-semibold text-muted mb-1 block">Border</label>
                             <input type="color" value={selected.borderColor || "#000"}
                               onChange={(e) => updateElement(selected.id, { borderColor: e.target.value })}
-                              className="h-8 w-14 rounded border border-slate-200 cursor-pointer" />
+                              className="h-8 w-14 rounded border border-border cursor-pointer" />
                             <input type="number" min={0} max={12} value={selected.borderWidth || 1}
                               onChange={(e) => updateElement(selected.id, { borderWidth: Number(e.target.value) })}
-                              className="mt-1 w-full px-2 py-1 text-sm bg-white rounded-lg border border-slate-200 outline-none" />
+                              className="mt-1 w-full px-2 py-1 text-sm bg-white rounded-lg border border-border outline-none" />
                           </div>
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Corner radius</label>
+                          <label className="text-xs font-semibold text-muted mb-1 block">Corner radius</label>
                           <input type="range" min={0} max={40} value={selected.radius || 0}
                             onChange={(e) => updateElement(selected.id, { radius: Number(e.target.value) })}
-                            className="w-full accent-blue-600" />
+                            className="w-full accent-primary-dark" />
                         </div>
                       </>
                     )}
@@ -782,26 +782,26 @@ export default function CertificateManager() {
                     {selected.type === "line" && (
                       <>
                         <div>
-                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Color</label>
+                          <label className="text-xs font-semibold text-muted mb-1 block">Color</label>
                           <input type="color" value={selected.color || "#000"}
                             onChange={(e) => updateElement(selected.id, { color: e.target.value })}
-                            className="h-8 w-16 rounded border border-slate-200 cursor-pointer" />
+                            className="h-8 w-16 rounded border border-border cursor-pointer" />
                         </div>
                         <div>
-                          <label className="text-xs font-semibold text-slate-500 mb-1 block">Thickness</label>
+                          <label className="text-xs font-semibold text-muted mb-1 block">Thickness</label>
                           <input type="number" min={1} max={10} value={selected.lineWidth || 2}
                             onChange={(e) => updateElement(selected.id, { lineWidth: Number(e.target.value) })}
-                            className="w-full px-2 py-1 text-sm bg-white rounded-lg border border-slate-200 outline-none" />
+                            className="w-full px-2 py-1 text-sm bg-white rounded-lg border border-border outline-none" />
                         </div>
                       </>
                     )}
 
                     <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
                       <div>
-                        <label className="text-xs font-semibold text-slate-500 block">X {Math.round(selected.x * 100)}%</label>
+                        <label className="text-xs font-semibold text-muted block">X {Math.round(selected.x * 100)}%</label>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-500 block">Y {Math.round(selected.y * 100)}%</label>
+                        <label className="text-xs font-semibold text-muted block">Y {Math.round(selected.y * 100)}%</label>
                       </div>
                     </div>
                   </div>
@@ -817,8 +817,8 @@ export default function CertificateManager() {
                 <h2 className="font-bold text-slate-900 flex items-center gap-2">
                   <CheckCircle2 size={18} className="text-emerald-600" /> 3 · Generate Certificates
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  Creates PDFs for all <span className="font-semibold text-slate-700">paid</span> students using real scores and emails each their download password.
+                <p className="text-sm text-muted mt-1">
+                  Creates PDFs for all <span className="font-semibold text-foreground">paid</span> students using real scores and emails each their download password.
                   {!template.published && " Publish the template first."}
                 </p>
               </div>
@@ -832,14 +832,14 @@ export default function CertificateManager() {
           {/* 4 · Manual upload + allocate */}
           <Card>
             <h2 className="font-bold text-slate-900 flex items-center gap-2 mb-4">
-              <UploadCloud size={18} className="text-blue-600" /> 4 · Upload a Certificate &amp; Allocate to a Student
+              <UploadCloud size={18} className="text-primary-dark" /> 4 · Upload a Certificate &amp; Allocate to a Student
             </h2>
             <div className="grid sm:grid-cols-[1fr_220px_auto] gap-3 items-end">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Student</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Student</label>
                 <select value={manualStudent || ""}
                   onChange={(e) => setManualStudent(Number(e.target.value))}
-                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-slate-200 focus:border-blue-500 outline-none">
+                  className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark outline-none">
                   <option value="">-- Select student --</option>
                   {participants.map((p) => (
                     <option key={p.id} value={p.id}>{p.full_name} · {p.grade} {p.score != null ? `(${p.score} pts)` : ""}</option>
@@ -847,10 +847,10 @@ export default function CertificateManager() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">PDF / Image</label>
-                <label className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm rounded-xl border-2 border-dashed border-slate-200 cursor-pointer hover:border-blue-400 hover:bg-blue-50/40 transition-all">
-                  {manualFile ? <CheckCircle2 size={15} className="text-emerald-600" /> : <UploadCloud size={15} className="text-slate-400" />}
-                  <span className="text-xs text-slate-500 truncate max-w-[140px]">{manualFile ? manualFile.name : "Choose file"}</span>
+                <label className="block text-sm font-medium text-foreground mb-1.5">PDF / Image</label>
+                <label className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm rounded-xl border-2 border-dashed border-border cursor-pointer hover:border-primary-dark hover:bg-primary-light/40 transition-all">
+                  {manualFile ? <CheckCircle2 size={15} className="text-emerald-600" /> : <UploadCloud size={15} className="text-muted" />}
+                  <span className="text-xs text-muted truncate max-w-[140px]">{manualFile ? manualFile.name : "Choose file"}</span>
                   <input type="file" accept="application/pdf,image/png,image/jpeg" className="hidden"
                     onChange={(e) => setManualFile(e.target.files?.[0] || null)} />
                 </label>
@@ -858,7 +858,7 @@ export default function CertificateManager() {
               <div className="flex gap-2">
                 <input placeholder="Notes (optional)" value={manualNotes}
                   onChange={(e) => setManualNotes(e.target.value)}
-                  className="w-40 px-3 py-2.5 text-sm bg-white rounded-xl border border-slate-200 outline-none" />
+                  className="w-40 px-3 py-2.5 text-sm bg-white rounded-xl border border-border outline-none" />
                 <Button loading={uploading === "manual"} disabled={!manualStudent || !manualFile} onClick={allocateManual}>
                   Allocate
                 </Button>
@@ -870,18 +870,18 @@ export default function CertificateManager() {
                 {certs.map((c) => (
                   <div key={c.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-primary-light text-primary-dark text-xs font-bold flex items-center justify-center shrink-0">
                         {String(c.full_name || "?").charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-slate-900 text-sm truncate">{c.full_name}</p>
-                        <p className="text-xs text-slate-500">{c.source} · {new Date(c.created_at).toLocaleString()}</p>
+                        <p className="text-xs text-muted">{c.source} · {new Date(c.created_at).toLocaleString()}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {c.is_visible === 1 ? <Badge variant="success" dot>Visible</Badge> : <Badge variant="warning">Hidden</Badge>}
                       <a href={apiUrl(c.file_url)} target="_blank" rel="noreferrer"
-                        className="text-xs text-blue-600 hover:underline font-semibold">View</a>
+                        className="text-xs text-primary-dark hover:underline font-semibold">View</a>
                       <button onClick={() => deleteCert(c.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><X size={14} /></button>
                     </div>
                   </div>

@@ -40,8 +40,17 @@ Point the frontend at the API by setting `VITE_API_URL` at build time (e.g. in `
 
 ## Structure
 
-- `src/App.tsx` — route definitions
+- `src/App.tsx` — route definitions + global widgets (`ChatbotWidget`, floating `CalculatorWidget`)
 - `src/pages/` — route components (top-level and `owner-dashboard/`)
-- `src/components/` — shared components (`ui/` holds Button, Card, Badge, Input, Spinner)
+- `src/components/` — shared components (`ui/` holds Button, Card, Badge, Input, Spinner, Alert, Modal, EmptyState; also working/canvas widgets and `Countdown`)
+- `src/store/contestStore.ts` — Zustand contest state
+- `src/theme.ts` — 20-colour dashboard theme system (scoped CSS-variable overrides under `.kmq-dashboard`)
+- `src/index.css` — Blue Academic design tokens (Tailwind v4 `@theme`)
 - `src/utils/api.ts` — API client
-- `public/` — static assets (`logo.jpeg`, `favicon.ico`)
+- `public/` — static assets (favicons, `site.webmanifest`, `logo.jpeg`)
+
+## Design
+
+The app uses a **Blue Academic** design language: solid colours only (no gradients, no emojis, no glassmorphism), Inter font, 12–16px rounded corners, soft shadows, and blue-only charts. Every colour is a semantic token in `src/index.css` (e.g. `--color-primary: #1e3a8a`), so utilities like `bg-primary` or `text-cool-sky-300` resolve through CSS variables.
+
+The per-user dashboard theme recolours those variables **only inside dashboard pages**: each dashboard's root `<main>` carries the `kmq-dashboard` class, and `theme.ts` injects a stylesheet redefining the accent variables on that scope. Non-dashboard (marketing) pages always stay blue.

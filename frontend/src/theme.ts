@@ -18,6 +18,8 @@ const T = (name: string, c600: string, c700: string, c500: string, c100: string,
 });
 
 export const THEMES: Theme[] = [
+  T("Royal", "#1e40af", "#1e3a8a", "#2563eb", "#dbeafe", "#eff6ff", "#bfdbfe", "#93c5fd"),
+  T("Maroon", "#8b1e2d", "#6e1622", "#a22431", "#f3d9dd", "#faeef0", "#e7bcc4", "#d996a3"),
   T("Blue", "#2563eb", "#1d4ed8", "#3b82f6", "#dbeafe", "#eff6ff", "#bfdbfe", "#93c5fd"),
   T("Indigo", "#4f46e5", "#4338ca", "#6366f1", "#e0e7ff", "#eef2ff", "#c7d2fe", "#a5b4fc"),
   T("Violet", "#7c3aed", "#6d28d9", "#8b5cf6", "#ede9fe", "#f5f3ff", "#ddd6fe", "#c4b5fd"),
@@ -35,7 +37,6 @@ export const THEMES: Theme[] = [
   T("Teal", "#0d9488", "#0f766e", "#14b8a6", "#ccfbf1", "#f0fdfa", "#99f6e4", "#5eead4"),
   T("Cyan", "#0891b2", "#0e7490", "#06b6d4", "#cffafe", "#ecfeff", "#a5f3fc", "#67e8f9"),
   T("Sky", "#0284c7", "#0369a1", "#0ea5e9", "#e0f2fe", "#f0f9ff", "#bae6fd", "#7dd3fc"),
-  T("Royal", "#1e40af", "#1e3a8a", "#2563eb", "#dbeafe", "#eff6ff", "#bfdbfe", "#93c5fd"),
   T("Slate", "#475569", "#334155", "#64748b", "#e2e8f0", "#f8fafc", "#cbd5e1", "#94a3b8"),
   T("Brown", "#92400e", "#78350f", "#b45309", "#fef3c7", "#fffbeb", "#fde68a", "#fcd34d"),
 ];
@@ -52,36 +53,50 @@ export function themeByColor(hex?: string | null): Theme {
 const STYLE_ID = "kmq-theme-style";
 const STORAGE_KEY = "kmq_theme";
 
-// Build the CSS that overrides Tailwind's blue utility classes with the theme.
+// Build the CSS that recolours the dashboard area. Every dashboard page wraps
+// its content in an element with class "kmq-dashboard"; overriding the accent
+// CSS variables on that scope recolours all the semantic utilities (bg-primary,
+// text-cool-sky-300, etc.) used inside it, leaving the rest of the site blue.
 function cssFor(t: Theme): string {
   return `
-.bg-blue-600{background-color:${t.c600} !important}
-.bg-blue-500{background-color:${t.c500} !important}
-.text-blue-600{color:${t.c600} !important}
-.text-blue-700{color:${t.c700} !important}
-.border-blue-500{border-color:${t.c600} !important}
-.border-blue-600{border-color:${t.c600} !important}
-.border-blue-200{border-color:${t.c200} !important}
-.border-blue-300{border-color:${t.c300} !important}
-.bg-blue-100{background-color:${t.c100} !important}
-.bg-blue-50{background-color:${t.c50} !important}
-.ring-blue-200{--tw-ring-color:${t.c200} !important}
-.ring-blue-300{--tw-ring-color:${t.c300} !important}
-.shadow-blue-100{--tw-shadow-color:${t.c100} !important}
-.shadow-blue-200{--tw-shadow-color:${t.c200} !important}
-.shadow-blue-300{--tw-shadow-color:${t.c300} !important}
-.hover\\:bg-blue-600:hover{background-color:${t.c600} !important}
-.hover\\:bg-blue-700:hover{background-color:${t.c700} !important}
-.hover\\:bg-blue-50:hover{background-color:${t.c50} !important}
-.hover\\:bg-blue-100:hover{background-color:${t.c100} !important}
-.hover\\:text-blue-600:hover{color:${t.c600} !important}
-.hover\\:text-blue-700:hover{color:${t.c700} !important}
-.hover\\:border-blue-300:hover{border-color:${t.c300} !important}
-.hover\\:border-blue-400:hover{border-color:${t.c300} !important}
-.group-hover\\:bg-blue-100:hover{background-color:${t.c100} !important}
-.focus\\:border-blue-500:focus{border-color:${t.c600} !important}
-.focus\\:ring-blue-100:focus{--tw-ring-color:${t.c100} !important}
-.accent-blue-600{accent-color:${t.c600} !important}
+.kmq-dashboard{
+--color-primary:${t.c700};
+--color-primary-dark:${t.c700};
+--color-primary-darker:${t.c700};
+--color-primary-light:${t.c100};
+--color-secondary:${t.c600};
+--color-brandblue:${t.c600};
+--color-brandblue-dark:${t.c700};
+--color-brandblue-light:${t.c100};
+--color-accent:${t.c600};
+--color-accent-dark:${t.c700};
+--color-accent-light:${t.c100};
+--color-cool-sky-50:${t.c50};
+--color-cool-sky-100:${t.c700};
+--color-cool-sky-200:${t.c700};
+--color-cool-sky-300:${t.c600};
+--color-cool-sky-400:${t.c600};
+--color-cool-sky-500:${t.c500};
+--color-cool-sky-600:${t.c300};
+--color-cool-sky-700:${t.c200};
+--color-cool-sky-800:${t.c100};
+--color-cool-sky-900:${t.c50};
+--color-pumpkin-spice:${t.c700};
+--color-pumpkin-spice-100:${t.c700};
+--color-pumpkin-spice-200:${t.c700};
+--color-pumpkin-spice-300:${t.c600};
+--color-pumpkin-spice-400:${t.c600};
+--color-pumpkin-spice-500:${t.c500};
+--color-pumpkin-spice-600:${t.c500};
+--color-pumpkin-spice-700:${t.c300};
+--color-pumpkin-spice-800:${t.c200};
+--color-pumpkin-spice-900:${t.c100};
+--color-ghost-white-100:${t.c700};
+--color-ghost-white-200:${t.c600};
+--color-ghost-white-300:${t.c600};
+--color-ghost-white-400:${t.c300};
+--color-ghost-white-500:${t.c50};
+}
 `;
 }
 
