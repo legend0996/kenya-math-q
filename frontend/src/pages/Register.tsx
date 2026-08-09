@@ -33,7 +33,7 @@ export default function Register() {
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     let v = e.target.value;
     if (key === "email") v = v.toLowerCase();
-    else if (key !== "password") v = v.toUpperCase();
+    else if (key !== "password" && !["grade", "county"].includes(key)) v = v.toUpperCase();
     setForm({ ...form, [key]: v });
   };
 

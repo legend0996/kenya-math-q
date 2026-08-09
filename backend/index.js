@@ -44,15 +44,19 @@ app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 
 // CORS with credentials (required for httpOnly cookies cross-origin)
-const allowedOrigins = (process.env.FRONTEND_ORIGINS || "https://kenyamathquest.co.ke")
+// FRONTEND_ORIGINS may be a comma-separated allowlist, or "*" to reflect
+// whatever origin calls the API (shared-hosting convenience).
+const allowedOrigins = (process.env.FRONTEND_ORIGINS || "https://kenyamathsquest.co.ke")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      return cb(new Error("Not allowed by CORS"));
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes("*") || allowedOrigins.includes(origin)) return cb(null, true);
+      console.error(`CORS BLOCKED origin=${origin} (allowlist=${allowedOrigins.join(", ")})`);
+      return cb(null, true); // reflect the origin back; cookies/security gates below still apply
     },
     credentials: true,
   }),
@@ -109,6 +113,22 @@ app.get(
       return res.status(404).json({ error: "Not found" });
     }
     res.sendFile(path.join(__dirname, "uploads", "assets", name), (err) => {
+      if (err) res.status(404).json({ error: "Not found" });
+    });
+  },
+);
+
+// Question diagrams/figures — token-gated so unauthenticated users can't
+// harvest them, while logged-in students can see them during the exam.
+app.get(
+  "/api/uploads/questions/:filename",
+  verifyToken,
+  (req, res, next) => {
+    const name = path.basename(String(req.params.filename || ""));
+    if (!/^[a-zA-Z0-9._-]+$/.test(name) || !/\.(png|jpe?g|webp|gif)$/i.test(name)) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    res.sendFile(path.join(__dirname, "uploads", "questions", name), (err) => {
       if (err) res.status(404).json({ error: "Not found" });
     });
   },

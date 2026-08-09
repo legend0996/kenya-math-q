@@ -7,8 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const MATERIALS_DIR = path.join(__dirname, "../uploads/materials");
 fs.mkdirSync(MATERIALS_DIR, { recursive: true });
+const QUESTIONS_DIR = path.join(__dirname, "../uploads/questions");
+fs.mkdirSync(QUESTIONS_DIR, { recursive: true });
 
-export { MATERIALS_DIR };
+export { MATERIALS_DIR, QUESTIONS_DIR };
 
 // ➕ UPLOAD A MATERIAL FILE (handled by multer in the route) — returns a public URL
 export const uploadMaterialFile = (req, res) => {
@@ -23,6 +25,24 @@ export const uploadMaterialFile = (req, res) => {
     });
   } catch (error) {
     console.error("MATERIAL UPLOAD ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 🖼 UPLOAD A QUESTION IMAGE (diagram/figure for a question) — returns the
+// file name stored on the question row; served via /api/uploads/questions.
+export const uploadQuestionImage = (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+    res.json({
+      success: true,
+      filename: req.file.filename,
+      url: `/api/uploads/questions/${req.file.filename}`,
+    });
+  } catch (error) {
+    console.error("QUESTION IMAGE UPLOAD ERROR:", error);
     res.status(500).json({ error: error.message });
   }
 };

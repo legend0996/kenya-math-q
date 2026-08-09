@@ -89,6 +89,50 @@ export const getPendingSchools = async (req, res) => {
   }
 };
 
+// 📋 DIRECTORY DATA — all students / schools / parents / admins for the
+// admin "Directories" tables page (owner dashboard, any admin can view).
+export const getDirectoryData = async (req, res) => {
+  try {
+    const [students, schools, parents, admins] = await Promise.all([
+      pool.query(
+        `SELECT s.id, s.full_name AS name, s.email, s.school, s.grade,
+                s.parent_phone, s.student_phone, s.created_at
+         FROM students s
+         ORDER BY s.id DESC`,
+      ),
+      pool.query(
+        `SELECT id, name, email, county, status, created_at
+         FROM schools
+         ORDER BY status, id DESC`,
+      ),
+      pool.query(
+        `SELECT p.id, p.full_name AS name, p.email, p.phone,
+                (SELECT COUNT(*) FROM parent_links pl WHERE pl.parent_id=p.id AND pl.status='confirmed') AS children,
+                p.created_at
+         FROM parents p
+         ORDER BY p.id DESC`,
+      ),
+      pool.query(
+        `SELECT id, COALESCE(username, email) AS name, email, username,
+                is_primary, permissions, created_at
+         FROM owners
+         ORDER BY is_primary DESC, id`,
+      ),
+    ]);
+
+    res.json({
+      success: true,
+      students: students.rows,
+      schools: schools.rows,
+      parents: parents.rows,
+      admins: admins.rows,
+    });
+  } catch (error) {
+    console.error("DIRECTORY DATA ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const updateSchoolStatus = async (req, res) => {
   try {
     const { school_id, status } = req.body;
@@ -119,8 +163,8 @@ export const createContest = async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO contests 
-      (name, contest_number, year, start_time, end_time, registration_open, entry_fee)
-      VALUES (?,?,?,?,?,true,?)`,
+      (name, contest_number, year, start_time, end_time, registration_open, entry_fee, marking_mode)
+      VALUES (?,?,?,?,?,true,?,'manual')`,
       [name, contest_number, year, start_time, end_time, fee],
     );
 
@@ -279,6 +323,7 @@ export const createQuestion = async (req, res) => {
 type,
       grade,
       working_space,
+      question_image,
     } = req.body;
 
     if (!contest_id || !question || !correct_answer || !grade) {
@@ -288,8 +333,8 @@ type,
     await pool.query(
       `INSERT INTO questions
       (contest_id, question, option_a, option_b, option_c, option_d,
-       correct_answer, marks, type, grade, working_space)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+       correct_answer, marks, type, grade, working_space, question_image)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         contest_id,
         question,
@@ -302,6 +347,7 @@ type,
         type || "mcq",
         grade,
         working_space != null ? Math.min(Math.max(Number(working_space) || 0, 120), 720) : 240,
+        question_image && String(question_image).trim() ? String(question_image).trim() : null,
       ],
     );
     res.json({ success: true, message: "Question added" });
@@ -359,7 +405,7 @@ export const getQuestionsByContest = async (req, res) => {
       await pool.query(
         `SELECT q.id, q.contest_id, q.grade, q.question, q.option_a, q.option_b,
                 q.option_c, q.option_d, q.correct_answer, q.marks, q.type, q.working_space,
-                q.created_at
+                q.question_image, q.created_at
          FROM questions q
          WHERE q.contest_id=?
          ORDER BY q.grade, q.id`,
@@ -387,6 +433,7 @@ export const updateQuestion = async (req, res) => {
       marks,
       grade,
       working_space,
+      question_image,
     } = req.body;
 
     const existing = (await pool.query("SELECT * FROM questions WHERE id=?", [question_id])).rows[0];
@@ -395,7 +442,7 @@ export const updateQuestion = async (req, res) => {
     await pool.query(
       `UPDATE questions SET
          grade=?, question=?, option_a=?, option_b=?, option_c=?, option_d=?,
-         correct_answer=?, marks=?, working_space=?
+         correct_answer=?, marks=?, working_space=?, question_image=?
        WHERE id=?`,
       [
         grade || existing.grade,
@@ -407,6 +454,9 @@ export const updateQuestion = async (req, res) => {
         correct_answer ?? existing.correct_answer,
         marks != null ? Number(marks) : existing.marks,
         working_space != null ? Number(working_space) : existing.working_space,
+        question_image !== undefined
+          ? (String(question_image).trim() || null)
+          : existing.question_image,
         question_id,
       ],
     );
@@ -447,6 +497,7 @@ export const releaseContestResults = async (req, res) => {
       return res.status(400).json({ error: "contest_id required" });
     }
     await pool.query("UPDATE contests SET results_released=true WHERE id=?", [contest_id]);
+    await pool.query("UPDATE results SET reviewable=1 WHERE contest_id=?", [contest_id]);
     res.json({ success: true, message: "Results released" });
   } catch (error) {
     console.error("RELEASE RESULTS ERROR:", error);
@@ -540,7 +591,7 @@ export const isPrimary = (req) => !!req.owner?.is_primary;
 // Any admin can read the admin list; only a primary admin can modify it
 export const getOwners = async (req, res) => {
   try {
-    const rows = (await pool.query("SELECT id, name, email, username, is_primary, permissions, created_at FROM owners ORDER BY is_primary DESC, id")).rows;
+    const rows = (await pool.query("SELECT id, COALESCE(username, email) AS name, email, username, is_primary, permissions, created_at FROM owners ORDER BY is_primary DESC, id")).rows;
     res.json({ success: true, owners: rows });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -557,8 +608,8 @@ export const addAdmin = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
     await pool.query(
-      "INSERT INTO owners (name, email, username, password, is_primary, permissions) VALUES (?,?,?,?,0,?)",
-      [name || email, email, username || null, hashed, JSON.stringify(normalizePerms(permissions))],
+      "INSERT INTO owners (email, username, password, is_primary, permissions) VALUES (?,?,?,0,?)",
+      [email, username || null, hashed, JSON.stringify(normalizePerms(permissions))],
     );
     res.json({ success: true, message: "Admin added" });
   } catch (error) {

@@ -24,15 +24,17 @@ export const validateConfig = () => {
     throw new Error("JWT_SECRET must be at least 32 characters in production.");
   }
 
-  // DB over TLS must be forced in production.
-  if (process.env.DB_SSL !== "true" && !process.env.DB_SSL_CA) {
+  // DB_TLS is explicit: shared hosting (cPanel) MySQL on the same server
+  // often has no TLS, so DB_SSL=false is legitimate in production. We just
+  // require the operator to make the choice explicitly (no silent default).
+  if (process.env.DB_SSL === undefined && !process.env.DB_SSL_CA) {
     throw new Error(
-      "DB_SSL must be 'true' in production (set DB_SSL=true to require an encrypted database connection).",
+      "DB_SSL must be explicitly set to 'true' or 'false' in production (set DB_SSL=false for a same-host cPanel database without TLS).",
     );
   }
 
   // A plausible public URL is required for M-Pesa to call us back.
-  if (!/^https:\/\/[^/\s]+\//.test(String(process.env.PUBLIC_URL))) {
-    throw new Error("PUBLIC_URL must be a full https URL ending with '/' in production.");
+  if (!/^https:\/\/[^/\s]+/.test(String(process.env.PUBLIC_URL))) {
+    throw new Error("PUBLIC_URL must be a full https URL in production.");
   }
 };

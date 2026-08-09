@@ -13,6 +13,7 @@ interface WQ {
   question_id: number; question: string; type: string; marks: number;
   correct_answer?: string; student_answer?: string; working: string[] | string | null;
   awarded?: number | null; annotation?: string | null;
+  question_image?: string | null;
 }
 interface Review {
   contest: { name: string };
@@ -23,7 +24,7 @@ interface Review {
 
 export default function Page() {
   return (
-    <Suspense fallback={<main className="kmq-dashboard pt-[104px] min-h-screen bg-surface"><PageSpinner message="Loading your marked paper…" /></main>}>
+    <Suspense fallback={<main className="kmq-dashboard pt-0 min-h-screen bg-surface"><PageSpinner message="Loading your marked paper…" /></main>}>
       <StudentReviewPage />
     </Suspense>
   );
@@ -51,10 +52,10 @@ function StudentReviewPage() {
       .finally(() => setLoading(false));
   }, [contestId]);
 
-  if (loading) return <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface"><PageSpinner message="Loading your marked paper…" /></main>;
+  if (loading) return <main className="kmq-dashboard pt-0 min-h-screen bg-surface"><PageSpinner message="Loading your marked paper…" /></main>;
 
   return (
-      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface">
+      <main className="kmq-dashboard pt-0 min-h-screen bg-surface">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -95,6 +96,15 @@ function StudentReviewPage() {
                       {q.awarded != null ? `${q.awarded}` : "—"}/{q.marks}
                     </span>
                   </div>
+
+                  {q.question_image && (
+                    <img
+                      src={apiUrl(`/api/uploads/questions/${q.question_image}`)}
+                      alt="Question diagram"
+                      className="max-h-72 w-auto max-w-full object-contain rounded-xl border border-slate-100 bg-slate-50 mb-4"
+                      loading="lazy"
+                    />
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-surface rounded-xl p-3">

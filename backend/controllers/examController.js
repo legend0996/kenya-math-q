@@ -190,7 +190,7 @@ export const getExamData = async (req, res) => {
 
     // Questions for THIS grade only (never send correct_answer to client)
     const questions = await pool.query(
-      `SELECT id, question, option_a, option_b, option_c, option_d, type, marks, working_space
+      `SELECT id, question, question_image, option_a, option_b, option_c, option_d, type, marks, working_space
        FROM questions
        WHERE contest_id=? AND grade=?
        ORDER BY id`,

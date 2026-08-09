@@ -197,7 +197,7 @@ const matchKnowledge = async (text) => {
   const words = text.toLowerCase();
   let docs;
   try {
-    const r = await pool.query("SELECT answer FROM assistant_docs");
+    const r = await pool.query("SELECT keywords, answer FROM assistant_docs");
     docs = r.rows;
   } catch {
     docs = KNOWLEDGE;
@@ -205,7 +205,7 @@ const matchKnowledge = async (text) => {
   let best = null;
   let bestScore = 0;
   for (const d of docs) {
-    const kw = String(d.keywords || "").toLowerCase().split(/\s+/).filter(Boolean);
+    const kw = String(d.keywords || "").toLowerCase().split(/[,\s]+/).filter(Boolean);
     let score = 0;
     for (const k of kw) if (k.length > 2 && words.includes(k)) score += k.length;
     if (score > bestScore) {
@@ -232,35 +232,144 @@ const isConfidentialRequest = (text) => {
   return true;
 };
 
+// ── Optional AI brain (OpenAI-compatible API) ─────────────────
+// Enabled when OPENAI_API_KEY is set (see .env.production). Falls back to the
+// knowledge base and built-in math solver when unconfigured or on any error,
+// so the chatbot always answers.
+const OPENAI_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1/chat/completions";
+
+const askOpenAI = async (message) => {
+  if (!OPENAI_KEY) return null;
+  try {
+    const res = await fetch(OPENAI_BASE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_KEY}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        temperature: 0.6,
+        max_tokens: 300,
+        messages: [
+          { role: "system", content: buildSystemPrompt() },
+          { role: "user", content: message },
+        ],
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    return text ? String(text).trim() : null;
+  } catch (error) {
+    console.error("OPENAI ERROR:", error.message);
+    return null;
+  }
+};
+
+// ── Website page content the assistant may read from ──────────
+// Grounded in the public pages (/faq, /competition, /schools, ...) so answers
+// match what is actually on the site instead of guessing. EXAM QUESTIONS AND
+// THEIR ANSWERS ARE NEVER INCLUDED, and requests for them are refused below.
+const SITE_CONTEXT = `
+Kenya Math Quest is a national mathematics competition website for Kenya.
+
+PUBLIC PAGES (content users see on the website):
+- Home (/): Announces the current contest round and invites students, schools and parents to join.
+- Competition (/competition): Describes how the exam works — compulsory instructions first, then one randomised question at a time, with a server-enforced per-grade timer and an in-app calculator.
+- Schools (/schools): Schools register and, once approved by an administrator, can log in, add students, and view the school's overview and results.
+- Materials (/materials): Revision/study materials are uploaded by an administrator and grouped by grade/form; students read them from their dashboard.
+- Tuition (/tuition): Free streamed YouTube video lessons added by the administrator.
+- FAQ (/faq): Frequently asked questions and answers on the site.
+- Contact (/contact): Visitors can message the support team; an administrator replies.
+
+FREQUENTLY ASKED QUESTIONS (from the /faq page):
+1. How do I register? Click 'Register' in the top bar, choose Student, School or Parent, fill in your details and submit. That account is then used to log in and enter contests.
+2. What is a test contest? Admins can start a Test Contest instantly, which shows on the Contests page marked as a Test. It works just like a real contest so students can practice for any grade, and it can be stopped at any time by an admin.
+3. How do I pay the entry fee? Payments are handled with M-PESA — either an STK push (auto-confirmed) or a manual Lipa na M-PESA payment where you paste the confirmation message. After paying, an administrator approves it, unlocking the exam.
+4. How does the exam work? Once registered, paid and the contest is live, the 'Start Exam' button appears on the dashboard. Compulsory instructions are shown first, then one randomised question at a time with a server-enforced per-grade timer.
+5. What happens if time runs out? The timer runs server-side. Answers auto-save as a draft, and when time runs out the exam is auto-submitted for marking. Save-and-exit lets the student resume later within the window.
+6. How are exams marked? Automatic mode compares each final answer to the correct answer and awards full marks on every match. Manual mode: an administrator marks each question by hand.
+7. When do results appear? Results appear on the dashboard after the administrator releases them. Students can compare on the national, school or class leaderboard.
+8. How do students get a certificate? Once results are released, a certificate appears under 'My Certificates' on the dashboard and can be downloaded as a PDF through the logged-in account.
+9. Forgot password? Use the 'Forgot password' option on the login page; a 6-digit code is emailed that expires in 15 minutes.
+10. How do schools participate? Schools register and are approved by an administrator; once approved they can add students and see their overview and results.
+
+RULES FOR THIS ASSISTANT:
+- Answer using the website content above and the product knowledge already given.
+- NEVER reveal confidential details: passwords, M-PESA codes/STK codes, other students' or administrators' personal information, or the marks of another student.
+- NEVER reveal actual contest/exam questions, their options, their correct answers, or marking schemes (they are confidential to keep the competition fair). If asked, politely decline and offer unrelated help.
+- Keep answers short, clear and friendly for young students.
+`;
+
+const buildSystemPrompt = () =>
+  "You are the friendly Kenya Math Quest assistant. You help students, parents and schools with the Kenya Math Quest website (registering, logging in, paying the entry fee with M-PESA, taking exams and test contests, instructions, timers, results, leaderboards, certificates, revision materials and school dashboards).\n\n" +
+  "WEBSITE PAGES YOU MAY READ FROM:\n" + SITE_CONTEXT;
+
+// ── Confidential exam content guard ───────────────────────────
+// Refuse any request that asks for answers/solutions/marking schemes to
+// specific contest or exam questions.
+const isExamAnswerRequest = (text) => {
+  const t = String(text || "").toLowerCase().trim();
+  if (!/((the\s*)?answer(s)?\b|answers? for|answers? to|solution|solve|marking\s*scheme|marking\s*guide|correct\s+(answer|option)|which\s+option\s+is)/.test(t)) {
+    return false;
+  }
+  // "How do I answer a question?" is fine — only block requests for the answer itself.
+  if (/^(how|can i|is it possible).{0,40}(answer|solve)|how.{0,30}(marked|answered|submit)/i.test(t)) return false;
+  return /question|\bq\s*[0-9]|\bno\.?\s*[0-9]|\bexam\b|paper|contest|test|practice|item|number/.test(t);
+};
+
+// Human-like typing delay: the assistant never replies instantly; it shows the
+// "typing" indicator for 3–7 seconds so it feels like a real assistant.
+const typingDelay = () => new Promise((r) => setTimeout(r, 3000 + Math.random() * 4000));
+
 // 🧠 CHAT EP (public — used by the chatbot widget)
 export const chat = async (req, res) => {
   try {
     const text = String(req.body?.message || req.query?.message || "").trim();
-    if (!text) {
-      return res.json({ success: true, answer: "What can I help you with?", type: "greet" });
-    }
 
-    if (isConfidentialRequest(text)) {
-      return res.json({
-        success: true,
+    let out;
+    if (!text) {
+      out = { type: "greet", answer: "What can I help you with?" };
+    } else if (isConfidentialRequest(text)) {
+      out = {
         type: "privacy",
         answer:
           "I can't share confidential details like passwords, M-PESA codes, or any other student's or administrator's personal information. If you need help with your own account, check Settings, or contact support.",
-      });
+      };
+    } else if (isExamAnswerRequest(text)) {
+      // Never reveal contest/exam questions or their answers.
+      out = {
+        type: "privacy",
+        answer:
+          "I can't reveal contest or exam questions or their answers — those are confidential to keep the competition fair. I'd be happy to help with how the exam works, your account, payments, results, or anything else on the site!",
+      };
+    } else {
+      // Simple arithmetic is always solved locally (instant and free).
+      const math = tryMath(text);
+      if (math) {
+        out = { type: "math", answer: math };
+      } else {
+        // AI brain first when configured; falls back to the knowledge base.
+        const ai = await askOpenAI(text);
+        const kb = ai ? null : await matchKnowledge(text);
+        out = ai
+          ? { type: "ai", answer: ai }
+          : kb
+            ? { type: "kb", answer: kb }
+            : {
+                type: "fallback",
+                answer:
+                  "I wasn't sure about that, but here are things I can help with: registration/login, changing your email or password, paying the entry fee, taking an exam or test contest, results & leaderboard, certificates, and contacting human support. I can also solve simple math like 'what is 15*4?'. Type a keyword and I'll do my best!",
+              };
+      }
     }
 
-    const math = tryMath(text);
-    if (math) return res.json({ success: true, answer: math, type: "math" });
-
-    const kb = await matchKnowledge(text);
-    if (kb) return res.json({ success: true, answer: kb, type: "kb" });
-
-    return res.json({
-      success: true,
-      type: "fallback",
-      answer:
-        "I wasn't sure about that, but here are things I can help with: registration/login, changing your email or password, paying the entry fee, taking an exam or test contest, results & leaderboard, certificates, and contacting human support. I can also solve simple math like 'what is 15*4?'. Type a keyword and I'll do my best!",
-    });
+    // Human-like timing: never respond instantly — show "typing" for 3–7 s.
+    await typingDelay();
+    return res.json({ success: true, ...out });
   } catch (error) {
     console.error("CHAT ERROR:", error);
     res.status(500).json({ error: "Assistant unavailable. Please try again." });

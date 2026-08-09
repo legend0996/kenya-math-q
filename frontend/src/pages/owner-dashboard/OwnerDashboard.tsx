@@ -4,7 +4,7 @@ import {
   BarChart2, School, Trophy, CreditCard, FileQuestion,
   FlaskConical, ShieldCheck, MessageSquare, PencilRuler,
   CheckCircle2, XCircle, Play, LogOut, Plus, Users, ChevronRight,
-  AlertCircle, Clock, ImageIcon, FileText, BookOpen, Bot, CalendarDays, UsersRound, X, type LucideIcon,
+  AlertCircle, Clock, ImageIcon, FileText, BookOpen, Bot, CalendarDays, UsersRound, X, Database, type LucideIcon,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { Card, StatCard } from "../../components/ui/Card";
@@ -22,9 +22,11 @@ import AssistantManager from "./assistant";
 import RegistrationsManager from "./registrations";
 import QuestionsManager from "./questions";
 import ParentsManager from "./parents";
+import Directories from "./directories";
 import { apiUrl, authHeaders, logout, fetchMe } from "../../utils/api";
+import { useSearchParams } from "react-router-dom";
 
-type Tab = "overview" | "schools" | "contests" | "questions" | "payments" | "parents" | "results" | "certificates" | "test" | "admins" | "support" | "marking" | "instructions" | "materials" | "assistant";
+type Tab = "overview" | "schools" | "contests" | "questions" | "payments" | "parents" | "results" | "certificates" | "test" | "admins" | "support" | "marking" | "instructions" | "materials" | "assistant" | "directories";
 
 type Stats = { students: number; schools: number; registered: number; paid: number; pending_payments: number };
 type SchoolRow = { id: number; name: string; email: string; county: string; status: string };
@@ -33,6 +35,7 @@ type PaymentRow = { id: number; full_name?: string; school?: string; mpesa_code?
 
 const TABS: { key: Tab; label: string; Icon: LucideIcon }[] = [
   { key: "overview", label: "Overview", Icon: BarChart2 },
+  { key: "directories", label: "Directories", Icon: Database },
   { key: "schools", label: "Schools", Icon: School },
   { key: "contests", label: "Contests", Icon: Trophy },
   { key: "questions", label: "Questions", Icon: FileQuestion },
@@ -71,7 +74,15 @@ const PERM: Record<string, Tab[]> = {
 };
 
 export default function OwnerDashboard() {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = searchParams.get("tab");
+    return TABS.some(({ key }) => key === t) ? (t as Tab) : "overview";
+  });
+  const goTab = (t: Tab) => {
+    setTab(t);
+    setSearchParams({ tab: t }, { replace: true });
+  };
   const [perms, setPerms] = useState<string[]>([]);
   const [isPrimary, setIsPrimary] = useState(false);
   const [adminName, setAdminName] = useState("");
@@ -124,6 +135,13 @@ export default function OwnerDashboard() {
       if (me?.success) { setPerms(me.owner?.permissions || []); setIsPrimary(!!me.owner?.is_primary); setAdminName(me.owner?.name || ""); }
     }).finally(() => setPageLoading(false));
   }, []);
+
+  // Keep the active tab in sync with ?tab= in the URL (e.g. when the dashboard
+  // navbar links to a specific admin section).
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && TABS.some(({ key }) => key === t) && t !== tab) setTab(t as Tab);
+  }, [searchParams, tab]);
 
   const updateSchoolStatus = async (id: number, status: string) => {
     await fetch(apiUrl("/api/owner/schools/update"), {
@@ -280,11 +298,11 @@ export default function OwnerDashboard() {
 
   if (pageLoading) return <PageSpinner message="Loading admin dashboard…" />;
 
-  const can = (t: Tab) => isPrimary || perms.some((p) => (PERM[p] || []).includes(t));
+  const can = (t: Tab) => t === "overview" || t === "directories" || isPrimary || perms.some((p) => (PERM[p] || []).includes(t));
   const visibleTabs = TABS.filter(({ key }) => key === "overview" || can(key));
 
   return (
-    <main className="pt-[104px] min-h-screen bg-surface">
+    <main className="pt-0 min-h-screen bg-surface">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
         {/* Header */}
@@ -297,7 +315,7 @@ export default function OwnerDashboard() {
           </div>
           <Button variant="ghost" icon={<LogOut size={16} />}
             className="text-red-500 hover:bg-red-50 hover:text-red-600"
-            onClick={async () => { await logout(); window.location.href = "/owner-login-7843-secure"; }}>
+            onClick={async () => { await logout(); window.location.href = "/"; }}>
             Logout
           </Button>
         </div>
@@ -319,7 +337,7 @@ export default function OwnerDashboard() {
           {visibleTabs.map(({ key, label, Icon }) => (
             <button
               key={key}
-              onClick={() => setTab(key)}
+              onClick={() => goTab(key)}
               className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
                 tab === key
                   ? "bg-primary-light text-primary-dark shadow-sm"
@@ -341,7 +359,7 @@ export default function OwnerDashboard() {
               <StatCard label="Paid" value={stats.paid} icon={<CreditCard size={22} />} accent="text-amber-600" />
             </div>
             {stats.pending_payments > 0 && (
-              <button onClick={() => setTab("payments")}
+              <button onClick={() => goTab("payments")}
                 className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl px-5 py-4 text-sm font-semibold hover:bg-amber-100 transition-colors">
                 <AlertCircle size={18} />
                 {stats.pending_payments} pending M-PESA payment(s) awaiting review
@@ -355,7 +373,7 @@ export default function OwnerDashboard() {
                 { tab: "questions" as Tab, icon: <FileQuestion size={20} />, label: "Add Questions", desc: "Build contest question bank" },
                 { tab: "certificates" as Tab, icon: <ImageIcon size={20} />, label: "Certificates", desc: "Design, publish & generate" },
               ].map((item) => (
-                <Card key={item.tab} hover onClick={() => setTab(item.tab)} className="flex items-center gap-4 cursor-pointer">
+                <Card key={item.tab} hover onClick={() => goTab(item.tab)} className="flex items-center gap-4 cursor-pointer">
                   <div className="w-11 h-11 rounded-xl bg-primary-light flex items-center justify-center shrink-0 text-primary-dark">
                     {item.icon}
                   </div>
@@ -663,6 +681,9 @@ export default function OwnerDashboard() {
 
         {/* ── Parents ── */}
         {tab === "parents" && <ParentsManager />}
+
+        {/* ── Directories (all records) ── */}
+        {tab === "directories" && <Directories />}
 
         {/* ── Results ── */}
         {tab === "results" && <ResultsManagement />}

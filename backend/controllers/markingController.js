@@ -294,10 +294,11 @@ export const releaseResults = async (req, res) => {
   try {
     const { contest_id } = req.body;
     if (!contest_id) return res.status(400).json({ error: "contest_id required" });
-    await pool.query(
+await pool.query(
       "UPDATE results SET reviewable=1 WHERE contest_id=?",
       [contest_id],
     );
+    await pool.query("UPDATE contests SET results_released=true WHERE id=?", [contest_id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -309,10 +310,11 @@ export const hideResults = async (req, res) => {
   try {
     const { contest_id } = req.body;
     if (!contest_id) return res.status(400).json({ error: "contest_id required" });
-    await pool.query(
+await pool.query(
       "UPDATE results SET reviewable=0 WHERE contest_id=?",
       [contest_id],
     );
+    await pool.query("UPDATE contests SET results_released=false WHERE id=?", [contest_id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -375,6 +377,7 @@ export const getStudentReview = async (req, res) => {
       working: parseWorking(ansMap[q.id]?.working),
       awarded: markMap[q.id] ? Number(markMap[q.id].marks_awarded) : null,
       annotation: markMap[q.id]?.annotation || null,
+      question_image: q.question_image || null,
     }));
 
     res.json({

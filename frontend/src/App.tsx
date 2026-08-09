@@ -1,6 +1,7 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import Navbar from "./components/Navbar";
+import DashboardNavbar from "./components/DashboardNavbar";
 import Footer from "./components/Footer";
 import ChatbotWidget from "./components/ChatbotWidget";
 import CalculatorWidget from "./components/CalculatorWidget";
@@ -30,6 +31,25 @@ import Tuition from "./pages/Tuition";
 import { applySavedTheme, readSavedTheme, applyTheme, THEME_EVENT } from "./theme";
 
 export default function App() {
+  const location = useLocation();
+
+  // Routes that belong to a logged-in dashboard — these show the dashboard
+  // navbar instead of the public website navbar.
+  const DASHBOARD_ROUTES = [
+    "/dashboard",
+    "/exam",
+    "/contests",
+    "/student-review",
+    "/settings",
+    "/support",
+    "/school-dashboard",
+    "/parent-dashboard",
+    "/owner-dashboard",
+  ];
+  const isDashboardPath =
+    DASHBOARD_ROUTES.some((r) => location.pathname === r) ||
+    location.pathname.startsWith("/parent-dashboard/");
+
   useEffect(() => {
     // Dashboard theme colour (saved in localStorage by the Settings/dashboard picker)
     applySavedTheme();
@@ -42,7 +62,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-full flex-1">
-      <Navbar />
+      {isDashboardPath ? <DashboardNavbar /> : <Navbar />}
       <div className="flex-1 page-enter">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -71,7 +91,7 @@ export default function App() {
           <Route path="*" element={<Home />} />
         </Routes>
       </div>
-      <Footer />
+      {!isDashboardPath && <Footer />}
       <ChatbotWidget />
       <CalculatorWidget />
     </div>

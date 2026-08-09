@@ -89,7 +89,7 @@ export default function Settings() {
 
   if (!me || me.role === "owner") {
     return (
-      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface px-4">
+      <main className="kmq-dashboard pt-0 min-h-screen bg-surface px-4">
         <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-border p-8 text-center">
           <div className="w-12 h-12 bg-primary-light text-primary-dark rounded-xl flex items-center justify-center mx-auto mb-4">
             <ShieldCheck size={22} />
@@ -103,7 +103,7 @@ export default function Settings() {
   }
 
   return (
-    <main className="pt-[104px] min-h-screen bg-surface px-4 py-12">
+    <main className="pt-0 min-h-screen bg-surface px-4 py-12">
       <div className="max-w-xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold text-foreground">Account Settings</h1>
 

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Users, GraduationCap, School, Trophy, Award,
   LogOut, Link2, Unlink, UserPlus, Eye,
-  Smartphone, Receipt, X,
+  Smartphone, Receipt, X, ShieldCheck,
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card, StatCard } from "../components/ui/Card";
@@ -41,6 +41,10 @@ export default function ParentDashboard() {
   const [linkEmail, setLinkEmail] = useState("");
   const [linking, setLinking] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  const [pendingLink, setPendingLink] = useState<{ student_email: string; child_name?: string } | null>(null);
+  const [confirmCode, setConfirmCode] = useState("");
+  const [confirming, setConfirming] = useState(false);
 
   const [showRegister, setShowRegister] = useState(false);
   const [regForm, setRegForm] = useState({ full_name: "", email: "", username: "", password: "", school: "", grade: "Grade 7" });
@@ -98,9 +102,18 @@ export default function ParentDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        showFeedback("success", `${data.child.full_name} linked to your account`);
-        setLinkEmail("");
-        load();
+        if (data.pending) {
+          setPendingLink({
+            student_email: data.student_email || linkEmail.trim().toLowerCase(),
+            child_name: data.child_name,
+          });
+          setConfirmCode("");
+          showFeedback("success", "A 6-digit confirmation code has been emailed to you. Enter it below to finish linking your child.");
+        } else {
+          if (data.child?.full_name) showFeedback("success", `${data.child.full_name} linked to your account`);
+          setLinkEmail("");
+          load();
+        }
       } else {
         showFeedback("error", data.error || "Could not link child");
       }
@@ -109,6 +122,39 @@ export default function ParentDashboard() {
     } finally {
       setLinking(false);
     }
+  };
+
+  const handleConfirmLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingLink || !/^\d{6}$/.test(confirmCode.trim())) return;
+    setConfirming(true);
+    try {
+      const res = await fetch(apiUrl("/api/parent/confirm-link"), {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ student_email: pendingLink.student_email, code: confirmCode.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showFeedback("success", `${data.child?.full_name || "Your child"} linked to your account`);
+        setConfirmCode("");
+        setPendingLink(null);
+        setLinkEmail("");
+        load();
+      } else {
+        const msg = data.error || "Could not confirm the link";
+        showFeedback("error", /expired/i.test(msg) ? "This confirmation code has expired. Please start again." : msg);
+      }
+    } catch {
+      showFeedback("error", "Connection error");
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const cancelPendingLink = () => {
+    setPendingLink(null);
+    setConfirmCode("");
   };
 
   const handleUnlink = async (child: Child) => {
@@ -218,7 +264,7 @@ export default function ParentDashboard() {
   const registered = children.filter((c) => c.registered).length;
 
   return (
-    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface">
+    <main className="kmq-dashboard pt-0 min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -230,7 +276,7 @@ export default function ParentDashboard() {
           <div className="flex items-center gap-4">
             <Button variant="ghost" icon={<LogOut size={16} />}
               className="text-red-500 hover:bg-red-50 hover:text-red-600"
-              onClick={async () => { await logout(); window.location.href = "/login"; }}>
+              onClick={async () => { await logout(); window.location.href = "/"; }}>
               Logout
             </Button>
           </div>
@@ -278,6 +324,33 @@ export default function ParentDashboard() {
               Link Child
             </Button>
           </form>
+
+          {pendingLink && (
+            <form onSubmit={handleConfirmLink} className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-200">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1">
+                <ShieldCheck size={16} className="text-amber-600" /> Confirm your link
+              </p>
+              <p className="text-sm text-muted mb-3">
+                Enter the 6-digit code we emailed to you {pendingLink.child_name ? `to link ${pendingLink.child_name}` : "to link your child"}. The code expires in 30 minutes.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="6-digit code"
+                  value={confirmCode}
+                  onChange={(e) => setConfirmCode(e.target.value.replace(/\D/g, ""))}
+                  className="flex-1 px-4 py-2.5 text-sm tracking-[0.4em] text-center font-bold bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-4 focus:ring-pumpkin-spice-900/60 outline-none transition-all"
+                />
+                <Button type="submit" loading={confirming} icon={<Link2 size={15} />}>Confirm Link</Button>
+                <Button type="button" variant="ghost" icon={<X size={15} />} onClick={cancelPendingLink}>Cancel</Button>
+              </div>
+              <p className="text-xs text-muted mt-2">
+                Not working? Check your inbox (and spam). If the code expired, click Link Child again to get a fresh one.
+              </p>
+            </form>
+          )}
 
           <div className="mt-4 pt-4 border-t border-border">
             {!showRegister ? (

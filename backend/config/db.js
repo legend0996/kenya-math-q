@@ -1,12 +1,30 @@
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Local/dev values first…
 dotenv.config({ path: path.join(__dirname, "../.env") });
+
+// …then the production config that ships in the deployment zip
+// (.env.production: NODE_ENV=production + real credentials). If it exists on
+// the server, its values are authoritative so production settings (DB, SMTP,
+// OPENAI_API_KEY, …) are actually used.
+const PROD_ENV_PATH = path.join(__dirname, "../.env.production");
+if (fs.existsSync(PROD_ENV_PATH)) {
+  try {
+    const parsed = dotenv.parse(fs.readFileSync(PROD_ENV_PATH));
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value !== undefined) process.env[key] = value;
+    }
+  } catch (e) {
+    console.error("WARN: could not load .env.production:", e.message);
+  }
+}
 
 const PROD = process.env.NODE_ENV === "production";
 
@@ -57,10 +75,11 @@ function buildPoolConfig() {
 }
 
 function validateConfig() {
-  // Never allow a production DB connection without TLS.
-  if (PROD && process.env.DB_SSL !== "true" && !process.env.DB_SSL_CA) {
+  // Explicitly chosen TLS policy: cPanel same-host MySQL often has no TLS,
+  // so DB_SSL=false is a valid production setting. Reject only an unset one.
+  if (PROD && process.env.DB_SSL === undefined && !process.env.DB_SSL_CA) {
     throw new Error(
-      "Refusing to start in production without DB_SSL=true (set DB_SSL=true to use encrypted MySQL connections).",
+      "DB_SSL must be explicitly set to 'true' or 'false' in production (set DB_SSL=false for a same-host cPanel database without TLS).",
     );
   }
   if (PROD && !process.env.JWT_SECRET) {

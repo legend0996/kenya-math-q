@@ -4,8 +4,6 @@
 -- ============================================================
 
 -- ── Username-based login (email OR username) ────────────────
-ALTER TABLE students ADD COLUMN username VARCHAR(100) NULL;
-ALTER TABLE students ADD UNIQUE KEY uq_students_username (username);
 
 ALTER TABLE schools ADD COLUMN username VARCHAR(100) NULL;
 ALTER TABLE schools ADD UNIQUE KEY uq_schools_username (username);

@@ -16,6 +16,7 @@ export default function Login() {
   const [step, setStep]       = useState<"check" | "password">("check");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [pwState, setPwState] = useState<"idle" | "ok" | "err">("idle");
 
   const [forgot, setForgot] = useState(false);
   const [forgotStage, setForgotStage] = useState<ForgotStage>("email");
@@ -46,6 +47,7 @@ export default function Login() {
       const data = await res.json();
       if (data.exists) {
         setStep("password");
+        setPwState("idle");
       } else {
         setError("No account found with that email/username. Try a different one or register.");
       }
@@ -79,12 +81,18 @@ export default function Login() {
       if (data.success || data.token) {
         // Session lives in an httpOnly cookie — do NOT store the JWT in localStorage.
         if (data.user) setUser({ id: data.user.id, role: data.user.role, name: data.user.name, school: data.user.school, grade: data.user.grade });
-        window.location.href =
-          type === "school" ? "/school-dashboard"
-          : type === "parent" ? "/parent-dashboard"
-          : "/dashboard";
+        // Correct password — flash a green confirmation before redirecting.
+        setPwState("ok");
+        setError("");
+        window.setTimeout(() => {
+          window.location.href =
+            type === "school" ? "/school-dashboard"
+            : type === "parent" ? "/parent-dashboard"
+            : "/dashboard";
+        }, 900);
       } else {
-        setError(data.error || "Invalid credentials. Please try again.");
+        setPwState("err");
+        setError(data.error || "Incorrect password. Please try again.");
       }
     } catch {
       setError("Connection error. Please check your network.");
@@ -198,7 +206,7 @@ export default function Login() {
                 ))}
               </div>
 
-              {error && <Alert variant="error" className="mb-5">{error}</Alert>}
+              {error && step === "check" && <Alert variant="error" className="mb-5">{error}</Alert>}
 
               {step === "check" ? (
                 <form onSubmit={checkIdentity} className="space-y-4">
@@ -221,7 +229,7 @@ export default function Login() {
                     <span className="text-slate-600 inline-flex items-center gap-2">
                       <User size={14} className="text-primary-dark" /> {identifier}
                     </span>
-                    <button type="button" onClick={() => { setStep("check"); setPassword(""); }}
+                    <button type="button" onClick={() => { setStep("check"); setPassword(""); setPwState("idle"); setError(""); }}
                       className="text-primary-dark font-medium hover:underline">
                       Change
                     </button>
@@ -232,7 +240,8 @@ export default function Login() {
                     placeholder="••••••••"
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    error={pwState === "err" ? "Incorrect password. Please try again." : undefined}
+                    onChange={(e) => { setPassword(e.target.value); if (pwState !== "idle") setPwState("idle"); }}
                     rightSlot={
                       <button type="button" onClick={() => setShowPw(!showPw)}
                         className="text-slate-400 hover:text-foreground p-1">
@@ -240,13 +249,18 @@ export default function Login() {
                       </button>
                     }
                   />
+                  {pwState === "ok" && (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 size={13} /> Password correct — signing you in…
+                    </p>
+                  )}
                   <div className="text-right -mt-1">
                     <button type="button" onClick={openForgot}
                       className="text-sm text-primary-dark font-medium hover:underline">
                       Forgot password?
                     </button>
                   </div>
-                  <Button type="submit" fullWidth size="lg" loading={loading} icon={<LogIn size={16} />}>
+                  <Button type="submit" fullWidth size="lg" loading={loading} disabled={pwState === "ok"} icon={<LogIn size={16} />}>
                     Sign In
                   </Button>
                 </form>

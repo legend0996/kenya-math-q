@@ -33,8 +33,8 @@ export const createContest = async (req, res) => {
 
     const result = await pool.query(
       `INSERT INTO contests 
-      (name, contest_number, year, start_time, end_time, registration_open)
-      VALUES (?, ?, ?, ?, ?, true)`,
+      (name, contest_number, year, start_time, end_time, registration_open, marking_mode)
+      VALUES (?, ?, ?, ?, ?, true, 'manual')`,
       [name, contest_number, year, start_time, end_time],
     );
 

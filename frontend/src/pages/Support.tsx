@@ -77,7 +77,7 @@ export default function SupportPage() {
 
   if (!me) {
     return (
-      <main className="pt-[104px] min-h-screen bg-surface px-4">
+      <main className="pt-0 min-h-screen bg-surface px-4">
         <div className="max-w-xl mx-auto bg-white rounded-2xl border border-border p-8 text-center">
           <div className="w-12 h-12 bg-primary-light text-primary-dark rounded-xl flex items-center justify-center mx-auto mb-4">
             <Lock size={22} />
@@ -91,7 +91,7 @@ export default function SupportPage() {
   }
 
   return (
-    <main className="pt-[104px] min-h-screen bg-surface px-4 py-12">
+    <main className="pt-0 min-h-screen bg-surface px-4 py-12">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-12 h-12 bg-primary text-white rounded-xl flex items-center justify-center">

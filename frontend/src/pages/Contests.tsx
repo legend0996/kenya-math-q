@@ -90,7 +90,7 @@ export default function AvailableContests() {
   };
 
   return (
-    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface">
+    <main className="kmq-dashboard pt-0 min-h-screen bg-surface">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-12 h-12 bg-primary text-white rounded-xl flex items-center justify-center">

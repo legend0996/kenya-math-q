@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { BookOpen, Plus, Pencil, Trash2, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { BookOpen, Plus, Pencil, Trash2, CheckCircle2, AlertCircle, X, ImagePlus } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
@@ -23,9 +23,10 @@ type Question = {
   marks: number;
   type: string;
   working_space?: number | null;
+  question_image?: string | null;
 };
 
-const EMPTY = { grade: "Grade 7", type: "mcq", question: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_answer: "", marks: 1, working_space: 240 };
+const EMPTY = { grade: "Grade 7", type: "mcq", question: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_answer: "", marks: 1, question_image: "" };
 
 export default function QuestionsManager() {
   const [contests, setContests] = useState<ContestRow[]>([]);
@@ -33,6 +34,7 @@ export default function QuestionsManager() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [uploadingImg, setUploadingImg] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const [editId, setEditId] = useState<number | null>(null);
@@ -75,7 +77,7 @@ export default function QuestionsManager() {
       option_d: q.option_d || "",
       correct_answer: q.correct_answer || "",
       marks: q.marks,
-      working_space: q.working_space ?? 240,
+      question_image: q.question_image || "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -119,6 +121,37 @@ export default function QuestionsManager() {
       }
     } catch { showFeedback("error", "Failed to delete"); }
     finally { setBusy(false); }
+  };
+
+  const uploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/\.(png|jpe?g|webp|gif)$/i.test(file.name)) {
+      showFeedback("error", "Only images (png, jpg, jpeg, webp, gif) are allowed");
+      return;
+    }
+    setUploadingImg(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(apiUrl("/api/owner/question/image"), {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: fd,
+      });
+      const d = await res.json();
+      if (d.success) {
+        setForm((f) => ({ ...f, question_image: d.filename }));
+        showFeedback("success", "Image uploaded — save the question to attach it");
+      } else {
+        showFeedback("error", d.error || "Image upload failed");
+      }
+    } catch {
+      showFeedback("error", "Image upload failed");
+    } finally {
+      setUploadingImg(false);
+    }
   };
 
   if (loading) return <PageSpinner message="Loading questions…" />;
@@ -176,6 +209,36 @@ export default function QuestionsManager() {
               placeholder="Enter the question…"
               className="w-full px-4 py-3 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all resize-none" />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Question Image (diagram / figure — optional)</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <label className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+                form.question_image
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                  : "border-slate-300 bg-white text-muted hover:border-primary-low hover:bg-surface"
+              }`}>
+                <ImagePlus size={16} />
+                {uploadingImg ? "Uploading…" : form.question_image ? "Replace image" : "Upload image"}
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={uploadImage} disabled={uploadingImg} />
+              </label>
+              {form.question_image && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={apiUrl(`/api/uploads/questions/${form.question_image}`)}
+                      alt="Question diagram preview"
+                      className="h-12 w-12 object-contain rounded-lg border border-slate-100 bg-slate-50"
+                    />
+                    <Button size="sm" variant="ghost" className="text-red-500" icon={<X size={14} />}
+                      onClick={() => setForm((f) => ({ ...f, question_image: "" }))}>
+                      Remove
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-muted mt-1.5">The image is shown to students alongside the question text. Max 8 MB.</p>
+          </div>
           {form.type === "mcq" && (
             <div className="grid sm:grid-cols-2 gap-3">
               {(["option_a", "option_b", "option_c", "option_d"] as const).map((k) => (
@@ -187,20 +250,15 @@ export default function QuestionsManager() {
               ))}
             </div>
           )}
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Correct Answer</label>
-              <input value={form.correct_answer} onChange={(e) => setForm({ ...form, correct_answer: e.target.value })} placeholder="Exact correct answer"
+              <label className="block text-sm font-medium text-foreground mb-1.5">Correct Answer (required)</label>
+              <input required value={form.correct_answer} onChange={(e) => setForm({ ...form, correct_answer: e.target.value })} placeholder="Exact correct answer"
                 className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Marks</label>
               <input type="number" min={1} max={50} value={form.marks} onChange={(e) => setForm({ ...form, marks: Number(e.target.value) })}
-                className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Working space height (px)</label>
-              <input type="number" min={120} max={720} step={20} value={form.working_space} onChange={(e) => setForm({ ...form, working_space: Number(e.target.value) })}
                 className="w-full px-4 py-2.5 text-sm bg-white rounded-xl border border-border focus:border-primary-dark focus:ring-2 focus:ring-primary-light outline-none transition-all" />
             </div>
           </div>
@@ -236,6 +294,13 @@ export default function QuestionsManager() {
                     <span className="text-xs font-semibold text-amber-600 px-2 py-0.5 rounded-lg bg-amber-50">{q.marks} mark{q.marks === 1 ? "" : "s"}</span>
                   </div>
                   <p className="font-semibold text-slate-900 mt-1">{q.question}</p>
+                  {q.question_image && (
+                    <img
+                      src={apiUrl(`/api/uploads/questions/${q.question_image}`)}
+                      alt="Question diagram"
+                      className="mt-2 h-16 w-auto max-w-[240px] object-contain rounded-lg border border-slate-100 bg-slate-50"
+                    />
+                  )}
                   {q.type === "mcq" && (
                     <p className="text-xs text-muted mt-0.5">
                       {[q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean).join("  |  ")}

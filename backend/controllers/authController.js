@@ -30,7 +30,12 @@ export const lookupByIdentifier = async (identifier) => {
 
   for (const role of ["student", "school", "owner", "parent"]) {
     const table = TABLES[role];
-    const nameCol = role === "student" || role === "parent" ? "full_name" : "name";
+    const nameCol =
+      role === "student" || role === "parent"
+        ? "full_name"
+        : role === "owner"
+          ? "COALESCE(username, email)"
+          : "name";
     const res = await pool.query(
       `SELECT id, email, username, ${nameCol} AS name FROM ${table} WHERE LOWER(email)=? OR LOWER(username)=? LIMIT 1`,
       [id, id],
@@ -78,46 +83,46 @@ export const getMe = async (req, res) => {
     const { id, role } = req.user;
 
     if (role === "student") {
-      const [rows] = await pool.query(
-        "SELECT id, full_name, email, username, school, grade, phone, paid FROM students WHERE id=?",
+      const rows = (await pool.query(
+        "SELECT id, full_name, email, username, school, grade, parent_phone, student_phone, paid FROM students WHERE id=?",
         [id],
-      );
+      )).rows;
       if (!rows[0]) return res.status(404).json({ error: "Account not found" });
       const s = rows[0];
       return res.json({
-        user: { id: s.id, role: "student", name: s.full_name, email: s.email, username: s.username, school: s.school, grade: s.grade, phone: s.phone },
+        user: { id: s.id, role: "student", name: s.full_name, email: s.email, username: s.username, school: s.school, grade: s.grade, phone: s.student_phone || s.parent_phone || null },
       });
     }
     if (role === "parent") {
-      const [rows] = await pool.query(
+      const rows = (await pool.query(
         "SELECT id, full_name, email, phone FROM parents WHERE id=?",
         [id],
-      );
+      )).rows;
       if (!rows[0]) return res.status(404).json({ error: "Account not found" });
       const p = rows[0];
       return res.json({ user: { id: p.id, role: "parent", name: p.full_name, email: p.email, phone: p.phone } });
     }
     if (role === "school") {
-      const [rows] = await pool.query(
+      const rows = (await pool.query(
         "SELECT id, name, email, county FROM schools WHERE id=?",
         [id],
-      );
+      )).rows;
       if (!rows[0]) return res.status(404).json({ error: "Account not found" });
       const s = rows[0];
       return res.json({ user: { id: s.id, role: "school", name: s.name, email: s.email, county: s.county, school: s.name } });
     }
     if (role === "owner") {
-      const [ownerRows] = await pool.query(
-        "SELECT id, name, email FROM owners WHERE id=?",
+      const ownerRows = (await pool.query(
+        "SELECT id, COALESCE(username, email) AS name, email FROM owners WHERE id=?",
         [id],
-      );
+      )).rows;
       if (ownerRows[0]) {
         return res.json({ user: { id: ownerRows[0].id, role: "owner", name: ownerRows[0].name, email: ownerRows[0].email } });
       }
-      const [studRows] = await pool.query(
+      const studRows = (await pool.query(
         "SELECT id, full_name, email, school FROM students WHERE id=? AND is_admin=1",
         [id],
-      );
+      )).rows;
       if (studRows[0]) {
         return res.json({ user: { id: studRows[0].id, role: "owner", name: studRows[0].full_name, email: studRows[0].email, school: studRows[0].school } });
       }
@@ -173,7 +178,7 @@ export const registerStudent = async (req, res) => {
     });
   } catch (error) {
     console.error("REGISTER STUDENT ERROR:", error);
-    res.status(500).json({ error: "Registration failed. Please try again." });
+    res.status(500).json({ error: "Registration failed. Please try again.", debug: error.message });
   }
 };
 
@@ -477,10 +482,22 @@ export const requestPasswordReset = async (req, res) => {
     const code = makeCode();
     const expires = new Date(Date.now() + 15 * 60 * 1000);
     await pool.query("DELETE FROM password_resets WHERE email=?", [acct.email]);
-    await pool.query(
-      "INSERT INTO password_resets (email, code_hash, expires_at) VALUES (?,?,?)",
-      [acct.email, hashCode(code), expires],
-    );
+    try {
+      await pool.query(
+        "INSERT INTO password_resets (email, code, code_hash, expires_at) VALUES (?,?,?,?)",
+        [acct.email, code, hashCode(code), expires],
+      );
+    } catch (e) {
+      if (/Unknown column 'code_hash'/.test(e.message)) {
+        // Migration 010 (code_hash) not applied on this host; store plaintext code.
+        await pool.query(
+          "INSERT INTO password_resets (email, code, expires_at) VALUES (?,?,?)",
+          [acct.email, code, expires],
+        );
+      } else {
+        throw e;
+      }
+    }
 
     try {
       await sendPasswordResetEmail(acct.email, code, acct.name, acct.role);

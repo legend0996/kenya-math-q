@@ -210,7 +210,7 @@ export default function Dashboard() {
 
 const handleLogout = async () => {
     await logout();
-    window.location.href = "/login";
+    window.location.href = "/";
   };
 
   if (pageLoading) return <PageSpinner message="Loading your dashboard…" />;
@@ -221,7 +221,7 @@ const handleLogout = async () => {
   const reopened = !!contest?.reopened;
 
   return (
-    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface">
+    <main className="kmq-dashboard pt-0 min-h-screen bg-surface">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">

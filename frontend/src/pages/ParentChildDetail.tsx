@@ -104,7 +104,7 @@ export default function ParentChildDetail() {
   };
 
   return (
-    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface">
+    <main className="kmq-dashboard pt-0 min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
 
         <div className="mb-8">

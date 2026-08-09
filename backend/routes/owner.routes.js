@@ -2,13 +2,14 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { MATERIALS_DIR, uploadMaterialFile } from "../controllers/contentController.js";
+import { MATERIALS_DIR, QUESTIONS_DIR, uploadMaterialFile, uploadQuestionImage } from "../controllers/contentController.js";
 import { loginLimiter } from "../middleware/authMiddleware.js";
 import { verifyOwner, requirePermission } from "../middleware/ownerAuth.js";
 import {
   loginOwner,
   getOwnerStats,
   getPendingSchools,
+  getDirectoryData,
   updateSchoolStatus,
   createContest,
   setEntryFee,
@@ -91,12 +92,30 @@ const upload = multer({
   limits: { fileSize: 20 * 1024 * 1024 },
 });
 
+// Image upload for questions (diagrams/figures)
+fs.mkdirSync(QUESTIONS_DIR, { recursive: true });
+const questionImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, QUESTIONS_DIR),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || "").slice(0, 10).toLowerCase();
+      cb(null, `q-${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (/\.(png|jpe?g|webp|gif)$/i.test(file.originalname || "")) return cb(null, true);
+    cb(new Error("Only images (png, jpg, jpeg, webp, gif) are allowed"));
+  },
+});
+
 router.post("/login", loginLimiter, loginOwner);
 
 // 🔒 PROTECTED ROUTES
 router.get("/stats", verifyOwner, getOwnerStats);
 
 router.get("/schools/pending", verifyOwner, requirePermission("manage_schools"), getPendingSchools);
+router.get("/schools/all", verifyOwner, getDirectoryData);
 router.post("/schools/update", verifyOwner, requirePermission("manage_schools"), updateSchoolStatus);
 
 router.post("/contest/create", verifyOwner, createContest);
@@ -115,6 +134,7 @@ router.post("/question/create", verifyOwner, requirePermission("manage_questions
 router.get("/question/contest/:contest_id", verifyOwner, requirePermission("manage_questions"), getQuestionsByContest);
 router.post("/question/:question_id/update", verifyOwner, requirePermission("manage_questions"), updateQuestion);
 router.delete("/question/:question_id", verifyOwner, requirePermission("manage_questions"), deleteQuestion);
+router.post("/question/image", verifyOwner, requirePermission("manage_questions"), questionImageUpload.single("file"), uploadQuestionImage);
 
 // 📄 CONTEST INSTRUCTIONS (compulsory, per grade — add/edit/delete anytime)
 router.get("/instructions/:contest_id", verifyOwner, getContestInstructions);

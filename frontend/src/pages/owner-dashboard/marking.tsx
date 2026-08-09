@@ -16,6 +16,7 @@ interface WS {
   question_id: number; question: string; type: string; marks: number;
   student_answer: string; correct_answer?: string; working: string[] | string | null;
   awarded: number | null; annotation: string | null;
+  question_image?: string | null;
 }
 interface WorksheetData {
   contest: { id: number; name: string; cat_total: number | null };
@@ -218,7 +219,7 @@ export default function Marking() {
               <span className="text-muted">Percentage: </span><b className="text-emerald-700">{pct}%</b>
             </div>
             <div className="flex-1" />
-            <Button loading={busy} onClick={save}>Save Marking</Button>
+            <Button loading={busy} onClick={save}>Update Student&apos;s Marks</Button>
           </div>
         )}
       </Card>
@@ -235,6 +236,13 @@ export default function Marking() {
                     <span className="text-xs text-muted ml-2">({maxQ} mark{maxQ === 1 ? "" : "s"})</span>
                     {q.type === "construction" && <span className="text-xs ml-2 px-2 py-0.5 rounded-lg bg-primary-light text-primary-dark">Construction</span>}
                   </p>
+                  {q.question_image && (
+                    <img
+                      src={apiUrl(`/api/uploads/questions/${q.question_image}`)}
+                      alt="Question diagram"
+                      className="w-full max-h-48 object-contain rounded-lg border border-slate-100 bg-slate-50 mb-2"
+                    />
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -294,7 +302,7 @@ export default function Marking() {
               <p className="text-sm text-foreground">Total: <b>{obtained}</b> / <b>{denom}</b></p>
               <p className="text-sm text-foreground">Percentage: <b className="text-emerald-700">{pct}%</b> (auto)</p>
             </div>
-            <Button loading={busy} onClick={save}>Save Marking</Button>
+            <Button loading={busy} onClick={save}>Update Student&apos;s Marks</Button>
           </Card>
         </div>
       )}

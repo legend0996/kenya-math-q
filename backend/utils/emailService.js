@@ -2,7 +2,11 @@ import nodemailer from "nodemailer";
 
 const host = process.env.SMTP_HOST;
 const port = Number(process.env.SMTP_PORT || 587);
+// 465 = implicit SSL (secure:true). 587 = usually STARTTLS; set SMTP_SECURE=true
+// if your host only offers SSL (e.g. wrong-version-number SSL errors on 587).
 const secure = process.env.SMTP_SECURE === "true";
+const requireTLS = secure ? false : process.env.SMTP_REQUIRE_TLS !== "false";
+const ignoreTLS = process.env.SMTP_IGNORE_TLS === "true";
 const user = process.env.EMAIL_USER;
 const pass = process.env.EMAIL_PASS;
 const from = process.env.EMAIL_FROM || user;
@@ -17,7 +21,7 @@ const transporter = configured
       port,
       secure,
       auth: { user, pass },
-      ...(secure ? {} : { requireTLS: true }),
+      ...(ignoreTLS ? { ignoreTLS: true } : { requireTLS }),
     })
   : null;
 

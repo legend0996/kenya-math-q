@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Calculator as CalcIcon, X } from "lucide-react";
 
 // A full-featured scientific-ish calculator that lives entirely in the
@@ -53,21 +53,56 @@ export default function CalculatorWidget() {
   const [open, setOpen] = useState(false);
   const [expr, setExpr] = useState("");
   const [ans, setAns] = useState<string | null>(null);
+  const justEqRef = useRef(false);
 
   const press = (b: { o?: string; fn?: string }) => {
-    if (b.fn === "clear") { setExpr(""); setAns(null); return; }
-    if (b.fn === "back") { setExpr((e) => e.slice(0, -1)); return; }
+    if (b.fn === "clear") { setExpr(""); setAns(null); justEqRef.current = false; return; }
+    if (b.fn === "back") {
+      setExpr((e) => {
+        const next = e.slice(0, -1);
+        if (next === "") setAns(null);
+        return next;
+      });
+      justEqRef.current = false;
+      return;
+    }
     if (b.fn === "sqrt") {
       const cur = safeEval(expr);
-      if (cur != null) { setAns(String(Math.round(Math.sqrt(cur) * 1e9) / 1e9)); }
+      if (cur != null) {
+        setAns(String(Math.round(Math.sqrt(cur) * 1e9) / 1e9));
+        justEqRef.current = true;
+      }
       return;
     }
-    if (b.fn === "=") {
+    if (b.fn === "eq") {
       const cur = safeEval(expr);
-      setAns(cur != null ? String(cur) : "Error");
+      if (cur != null) {
+        setAns(String(cur));
+        justEqRef.current = true;
+      } else {
+        setAns("Error");
+        justEqRef.current = true;
+      }
       return;
     }
+
+    // After an answer: an operator continues from the result, a digit starts fresh.
+    if (justEqRef.current) {
+      const op = b.o || "";
+      if (/[\d.]/.test(op)) {
+        setExpr(op);
+        setAns(null);
+      } else {
+        const base = ans != null && ans !== "Error" ? ans : "0";
+        setExpr(base + op);
+        setAns(null);
+      }
+      justEqRef.current = false;
+      return;
+    }
+
     setExpr((e) => e + (b.o || ""));
+    justEqRef.current = false;
   };
 
   return (

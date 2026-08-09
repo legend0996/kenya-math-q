@@ -66,7 +66,7 @@ export default function ChatbotWidget() {
             </span>
             <div>
               <p className="text-sm font-semibold">Math Quest Assistant</p>
-              <p className="text-xs text-pumpkin-spice-900">Instant answers • no external API</p>
+              <p className="text-xs text-pumpkin-spice-900">Instant answers • AI-powered</p>
             </div>
           </div>
 
@@ -80,7 +80,13 @@ export default function ChatbotWidget() {
                 {m.text}
               </div>
             ))}
-            {loading && <div className="text-xs text-muted">typing…</div>}
+            {loading && (
+              <div className="max-w-[85%] px-3 py-2 text-sm rounded-2xl bg-ghost-white-500 text-charcoal-500 rounded-bl-sm flex items-center gap-1.5 w-fit">
+                <span className="typing-dot" />
+                <span className="typing-dot" style={{ animationDelay: "0.15s" }} />
+                <span className="typing-dot" style={{ animationDelay: "0.3s" }} />
+              </div>
+            )}
           </div>
 
           <div className="border-t border-border p-2 flex flex-wrap gap-1.5">

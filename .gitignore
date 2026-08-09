@@ -30,3 +30,6 @@ Thumbs.db
 
 # Deployment zips
 *-kenyamathquest.zip
+
+# Generated admin seed with credential hashes
+backend/admin_owners_generated.sql

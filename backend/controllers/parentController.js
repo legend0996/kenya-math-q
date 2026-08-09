@@ -91,12 +91,11 @@ export const getParentDashboard = async (req, res) => {
   }
 };
 
-// 🔗 LINK CHILD — now requires the STUDENT'S CONSENT:
+// 🔗 LINK CHILD — the linking code goes to the PARENT'S OWN EMAIL:
 // 1. Parent enters the student's account email.
-// 2. A 6-digit one-time code is emailed to the student's account.
-// 3. The student tells the parent the code (out of band), who confirms it
-//    via confirmLinkChild. Until then the link stays pending and the child's
-//    data is NEVER exposed to the parent.
+// 2. A 6-digit one-time code is emailed to the parent's own account.
+// 3. The parent enters that code to confirm the link. Until then the link
+//    stays pending and the child's data is NEVER exposed to the parent.
 export const linkChild = async (req, res) => {
   try {
     if (!requireParent(req, res)) return;
@@ -138,11 +137,12 @@ export const linkChild = async (req, res) => {
     const code = String(crypto.randomInt(100000, 999999));
     const expires = new Date(Date.now() + 30 * 60 * 1000);
 
-    // Email the student their consent code so only THEY can approve the link.
+    // Email the PARENT their own confirmation code (the child's email is never
+    // used, and never revealed to the parent here).
     const emailConfigured = Boolean(
       process.env.SMTP_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS,
     );
-    if (!emailConfigured || !stud.email) {
+    if (!emailConfigured || !parent.email) {
       return res.status(503).json({ error: "Linking requires a working email service. Contact support." });
     }
 
@@ -155,7 +155,7 @@ export const linkChild = async (req, res) => {
     );
 
     try {
-      await sendLinkingCodeEmail(stud.email, code, stud.full_name);
+      await sendLinkingCodeEmail(parent.email, code, parent.full_name);
     } catch (e) {
       console.error("LINK CODE EMAIL ERROR:", e.message);
       await pool.query(
@@ -168,7 +168,8 @@ export const linkChild = async (req, res) => {
     res.json({
       success: true,
       pending: true,
-      message: "A confirmation code has been emailed to the student. Ask them for the 6-digit code and confirm the link below.",
+      student_email: idValue,
+      message: `A 6-digit confirmation code has been emailed to ${parent.email}. Enter it below to link ${stud.full_name}.`,
     });
   } catch (error) {
     console.error("LINK CHILD ERROR:", error);
@@ -196,9 +197,10 @@ export const confirmLinkChild = async (req, res) => {
         `SELECT pl.*, s.email AS student_email
          FROM parent_links pl
          JOIN students s ON s.id = pl.student_id
-         WHERE pl.parent_id=? AND s.email=? AND pl.status='pending'
+         WHERE pl.parent_id=? AND (s.email=? OR (s.username IS NOT NULL AND LOWER(s.username)=?))
+           AND pl.status='pending'
          LIMIT 1`,
-        [parentId, idValue],
+        [parentId, idValue, idValue],
       )
     ).rows[0];
 

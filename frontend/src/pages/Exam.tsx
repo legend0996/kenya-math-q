@@ -12,6 +12,7 @@ import { apiUrl, authHeaders, fetchMe } from "../utils/api";
 type Question = {
   id: number;
   question: string;
+  question_image?: string | null;
   option_a?: string;
   option_b?: string;
   option_c?: string;
@@ -34,9 +35,11 @@ type Phase =
 const OPTION_LABELS = ["A", "B", "C", "D"];
 
 function formatTime(seconds: number) {
-  const m = Math.floor(seconds / 60).toString().padStart(2, "0");
-  const s = Math.floor(seconds % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
+  const total = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60).toString().padStart(2, "0");
+  const s = Math.floor(total % 60).toString().padStart(2, "0");
+  return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
 }
 
 export default function Exam() {
@@ -60,12 +63,14 @@ export default function Exam() {
   const lastSaveRef = useRef(0);
   const contestIdRef = useRef<number | null>(null);
   const violationsRef = useRef(0);
+  const questionsRef = useRef<Question[]>([]);
 
   answersRef.current = answers;
   indexRef.current = currentIndex;
   timeRef.current = timeLeft;
   phaseRef.current = phase;
   contestIdRef.current = contestId;
+  questionsRef.current = questions;
 
   const saveDraft = useCallback(async (options?: { silent?: boolean }) => {
     if (!startedRef.current || contestIdRef.current == null) return;
@@ -95,7 +100,12 @@ export default function Exam() {
 
   const handleSubmit = useCallback(async (auto = false) => {
     if (phaseRef.current.name === "submitted") return;
-    if (!auto && !confirm("Are you sure you want to submit your exam?")) return;
+    const pending = questionsRef.current.length - Object.keys(answersRef.current).length;
+    if (!auto && !confirm(
+      pending > 0
+        ? `You still have ${pending} unanswered question${pending === 1 ? "" : "s"}. Submitting now will leave them unmarked. Continue?`
+        : "Are you sure you want to submit your exam?"
+    )) return;
     if (contestIdRef.current == null) return;
 
     setSubmitting(true);
@@ -378,7 +388,7 @@ export default function Exam() {
 
   if (phase.name === "blocked") {
     return (
-      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-0 min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 max-w-md w-full text-center">
           <Lock size={40} className="text-amber-400 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-slate-900 mb-2">Exam Locked</h1>
@@ -393,7 +403,7 @@ export default function Exam() {
 
   if (phase.name === "no-questions") {
     return (
-      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-0 min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="text-center">
           <AlertTriangle size={36} className="text-amber-400 mx-auto mb-3" />
           <p className="font-semibold text-slate-700">No questions available for your grade yet</p>
@@ -408,7 +418,7 @@ export default function Exam() {
 
   if (phase.name === "not-attempted") {
     return (
-      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-0 min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="text-center">
           <AlertTriangle size={36} className="text-amber-400 mx-auto mb-3" />
           <p className="font-semibold text-slate-700">You didn&apos;t answer any questions</p>
@@ -430,7 +440,7 @@ export default function Exam() {
 
   if (phase.name === "instructions") {
     return (
-      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-0 min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-primary/20 p-8 max-w-xl w-full">
           <div className="w-12 h-12 bg-primary-light rounded-2xl flex items-center justify-center mb-5 text-primary-dark">
             <AlertTriangle size={24} />
@@ -460,7 +470,7 @@ export default function Exam() {
   if (phase.name === "continue") {
     const { answered, time, total } = phase.info;
     return (
-      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-0 min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-primary/20 p-10 max-w-lg w-full text-center">
           <div className="w-16 h-16 bg-primary-light rounded-2xl flex items-center justify-center mx-auto mb-5 text-primary-dark">
             <Play size={28} />
@@ -495,7 +505,7 @@ export default function Exam() {
 
   if (phase.name === "submitted") {
     return (
-      <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface flex items-center justify-center px-4">
+      <main className="kmq-dashboard pt-0 min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-10 max-w-md w-full text-center">
           <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <CheckCircle2 size={30} className="text-emerald-600" />
@@ -527,7 +537,7 @@ export default function Exam() {
   const isOpen = !isMCQ || opts.length === 0;
 
   return (
-    <main className="kmq-dashboard pt-[104px] min-h-screen bg-surface exam-secure">
+    <main className="kmq-dashboard pt-0 min-h-screen bg-surface exam-secure">
       <div className="max-w-3xl mx-auto px-4 py-8">
 
         {/* Top bar */}
@@ -576,22 +586,31 @@ export default function Exam() {
               {currentIndex + 1}
             </span>
             <div className="flex-1">
-              <p className="text-slate-900 font-medium leading-relaxed">{q.question}</p>
-              {q.marks ? (
-                <p className="text-xs text-slate-400 mt-1">{q.marks} {q.marks === 1 ? "mark" : "marks"}</p>
-              ) : null}
+              <p className="text-slate-900 font-semibold leading-relaxed">{q.question}</p>
+              {q.question_image && (
+                <img
+                  src={apiUrl(`/api/uploads/questions/${q.question_image}`)}
+                  alt="Question diagram"
+                  className="mt-3 max-h-80 w-auto max-w-full object-contain rounded-xl border border-slate-100 bg-slate-50"
+                  loading="lazy"
+                />
+              )}
             </div>
+            <span className="shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-100">
+              {q.marks ?? 1} mark{q.marks === 1 ? "" : "s"}
+            </span>
           </div>
 
           <div className="mb-1">
-            <p className="text-sm font-semibold text-slate-700 mb-1.5">
-              {isOpen ? "Final Answer" : "Final Answer — choose one option"}
+            <p className="text-sm font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+              Your Answer
+              <span className="font-normal text-xs text-slate-400">(optional — you can skip if you don&apos;t know it)</span>
             </p>
             {isOpen ? (
               <textarea
                 rows={5}
-                className="w-full px-4 py-3 text-sm bg-surface rounded-xl border border-slate-200 focus:border-primary-dark focus:ring-4 focus:ring-primary-light outline-none transition-all resize-none"
-                placeholder="Type your final answer here — this is what will be marked…"
+                className="w-full px-4 py-3 text-sm bg-white rounded-xl border-2 border-slate-200 focus:border-primary-dark focus:ring-4 focus:ring-primary-light outline-none transition-all resize-none"
+                placeholder="Type your answer here…"
                 value={answers[q.id] || ""}
                 onChange={(e) => handleAnswer(q.id, e.target.value)}
               />
@@ -623,7 +642,7 @@ export default function Exam() {
               </div>
             )}
             <p className="text-xs text-slate-400 mt-1.5">
-              Enter only your final answer — each question is marked automatically. Questions appear one at a time and the order is randomised.
+              You can skip any question and come back to it later with Previous. Skipped questions get no marks — your paper is marked by the examiner.
             </p>
           </div>
         </div>
@@ -648,25 +667,25 @@ export default function Exam() {
               variant="primary"
               icon={<Send size={15} />}
               loading={submitting}
-              disabled={!answers[q.id]}
               onClick={() => handleSubmit()}
               className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200"
             >
-              Submit{unanswered > 0 ? ` (${unanswered} left)` : ""}
+              Submit{unanswered > 0 ? ` (${unanswered} unanswered)` : ""}
             </Button>
           ) : (
             <Button
               icon={<ChevronRight size={16} />}
-              disabled={!answers[q.id]}
               onClick={() => setCurrentIndex((p) => p + 1)}
             >
-              Next
+              {answers[q.id] ? "Next" : "Skip"}
             </Button>
           )}
         </div>
         {!answers[q.id] && (
           <p className="text-center text-xs text-slate-400 mt-2">
-            Answer this question to move on.
+            {isLast
+              ? "You can submit without answering this question."
+              : "Not sure? Press Skip to leave it blank — you can answer it later with Previous."}
           </p>
         )}
       </div>
