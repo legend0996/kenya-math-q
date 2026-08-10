@@ -670,7 +670,7 @@ export const getMyResults = async (req, res) => {
 // Finalizes draft sessions whose timer already ran out, so nobody gets extra time.
 export const finalizeExpiredDrafts = async () => {
   const sessions = await pool.query(
-    `SELECT student_id, contest_id, answers, grade FROM exam_sessions
+    `SELECT student_id, contest_id, answers FROM exam_sessions
      WHERE status='draft' AND expires_at IS NOT NULL AND expires_at < DATE_SUB(NOW(), INTERVAL 130 SECOND)
      LIMIT 500`,
   );
@@ -695,7 +695,7 @@ export const finalizeExpiredDrafts = async () => {
         "SELECT grade FROM students WHERE id=?",
         [s.student_id],
       );
-      let grade = s.grade || gradeRes.rows[0]?.grade;
+      const grade = gradeRes.rows[0]?.grade;
       if (!grade) continue;
 
       const qRes = await pool.query(

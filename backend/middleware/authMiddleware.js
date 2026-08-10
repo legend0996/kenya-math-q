@@ -27,6 +27,33 @@ export const resetLimiter = rateLimit({
   message: { error: "Too many reset attempts. Try again later." },
 });
 
+// Optional auth — never rejects. Used by session-status endpoints like /me
+// so an unauthenticated visitor gets { user: null } instead of a noisy 401.
+export const verifyTokenSoft = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  let token;
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  } else if (req.cookies?.token) {
+    token = req.cookies.token;
+  }
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role === "admin") decoded.role = "owner";
+    req.user = decoded;
+  } catch {
+    req.user = null;
+  }
+  next();
+};
+
 export const verifyToken = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;

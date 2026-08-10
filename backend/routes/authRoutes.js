@@ -1,6 +1,6 @@
 import express from "express";
 import { authLimiter, loginLimiter, resetLimiter } from "../middleware/authMiddleware.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
+import { verifyToken, verifyTokenSoft } from "../middleware/authMiddleware.js";
 import { verifyOwner } from "../middleware/ownerAuth.js";
 import {
   registerStudent,
@@ -37,8 +37,9 @@ router.post("/change-email", verifyToken, changeEmail);
 router.post("/owner/change-password", verifyOwner, changePassword);
 router.post("/owner/change-email", verifyOwner, changeEmail);
 
-// CURRENT USER (verified via httpOnly cookie or Bearer token)
-router.get("/me", verifyToken, getMe);
+// CURRENT USER (verified via httpOnly cookie or Bearer token).
+// Soft auth: unauthenticated visitors get { user: null } (200) rather than a 401.
+router.get("/me", verifyTokenSoft, getMe);
 
 // PASSWORD RESET (public, code emailed — 15 min expiry)
 router.post("/forgot", resetLimiter, requestPasswordReset);

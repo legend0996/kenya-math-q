@@ -77,9 +77,13 @@ export const logout = (req, res) => {
   res.json({ success: true, message: "Logged out" });
 };
 
-// 👤 CURRENT USER — reads identity from the verified token (cookie or header)
+// 👤 CURRENT USER — reads identity from the verified token (cookie or header).
+// With soft auth (no token / invalid token) this just reports "not logged in".
 export const getMe = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.json({ user: null });
+    }
     const { id, role } = req.user;
 
     if (role === "student") {
